@@ -78,9 +78,12 @@ class AppRepository(private val context: Context) {
         }
         val pm = context.packageManager
         // Одним вызовом вместо getApplicationInfo на каждый пакет.
-        val categories = runCatching {
-            pm.getInstalledApplications(0).associate { it.packageName to it.category }
-        }.getOrDefault(emptyMap())
+        val installed = runCatching { pm.getInstalledApplications(0) }.getOrDefault(emptyList())
+        val categories = installed.associate { it.packageName to it.category }
+        // Системное не удаляется, поэтому и пункт в меню показывать незачем.
+        val systemFlags = installed.associate {
+            it.packageName to (it.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM != 0)
+        }
 
         val infos = HashMap<String, android.content.pm.LauncherActivityInfo>()
         val list = users.flatMap { user ->
@@ -93,6 +96,7 @@ class AppRepository(private val context: Context) {
                         user = user,
                         category = categories[info.componentName.packageName]
                             ?: android.content.pm.ApplicationInfo.CATEGORY_UNDEFINED,
+                        system = systemFlags[info.componentName.packageName] ?: false,
                         customLabel = labels.getString(
                             "${info.componentName.flattenToShortString()}#${user.hashCode()}", null
                         ),
@@ -197,6 +201,15 @@ class AppRepository(private val context: Context) {
 
     fun launch(entry: AppEntry) {
         runCatching { launcherApps.startMainActivity(entry.component, entry.user, null, null) }
+    }
+
+    /** Удаление: система сама спросит подтверждение. */
+    fun uninstall(entry: AppEntry) {
+        val intent = android.content.Intent(
+            android.content.Intent.ACTION_DELETE,
+            android.net.Uri.parse("package:${entry.component.packageName}"),
+        ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        runCatching { context.startActivity(intent) }
     }
 
     fun openAppInfo(entry: AppEntry) {

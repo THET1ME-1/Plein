@@ -131,6 +131,18 @@ fun AppMenuSheet(
                     repository.openAppInfo(entry)
                     onDismiss()
                 })
+                if (!entry.system) {
+                    MenuRow(
+                        icon = Icons.Rounded.Delete,
+                        title = stringResource(R.string.uninstall),
+                        subtitle = stringResource(R.string.uninstall_hint),
+                        danger = true,
+                        onClick = {
+                            repository.uninstall(entry)
+                            onDismiss()
+                        },
+                    )
+                }
             }
 
             if (folders.any { !it.isAll }) {
@@ -168,6 +180,7 @@ private fun MenuRow(
     title: String,
     subtitle: String? = null,
     highlighted: Boolean = false,
+    danger: Boolean = false,
     onClick: () -> Unit,
 ) {
     Surface(
@@ -187,16 +200,22 @@ private fun MenuRow(
             Icon(
                 icon,
                 contentDescription = null,
-                tint = if (highlighted) MaterialTheme.colorScheme.onPrimaryContainer
-                else MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = when {
+                    danger -> MaterialTheme.colorScheme.error
+                    highlighted -> MaterialTheme.colorScheme.onPrimaryContainer
+                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                },
                 modifier = Modifier.size(20.dp),
             )
             Column(Modifier.padding(start = 14.dp)) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.bodyLarge.copy(fontSize = 14.5.sp),
-                    color = if (highlighted) MaterialTheme.colorScheme.onPrimaryContainer
-                    else MaterialTheme.colorScheme.onSurface,
+                    color = when {
+                        danger -> MaterialTheme.colorScheme.error
+                        highlighted -> MaterialTheme.colorScheme.onPrimaryContainer
+                        else -> MaterialTheme.colorScheme.onSurface
+                    },
                 )
                 subtitle?.let {
                     Text(

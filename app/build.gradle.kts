@@ -1,9 +1,16 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 
 plugins {
     // AGP 9 поднимает Kotlin сам, отдельный kotlin-android больше не нужен.
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+}
+
+// Ключ и пароли живут вне репозитория: ~/keys/plein.properties
+val keystoreProps = Properties().apply {
+    val file = File(System.getProperty("user.home"), "keys/plein.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
 }
 
 android {
@@ -19,10 +26,25 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            val storePath = keystoreProps.getProperty("storeFile")
+            if (storePath != null) {
+                storeFile = File(storePath)
+                storePassword = keystoreProps.getProperty("storePassword")
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // Временно подписываем отладочным ключом, чтобы мерить скорость.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (keystoreProps.getProperty("storeFile") != null) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")

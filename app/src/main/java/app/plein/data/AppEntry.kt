@@ -10,6 +10,7 @@ data class AppEntry(
     val component: ComponentName,
     val user: UserHandle,
     val category: Int = ApplicationInfo.CATEGORY_UNDEFINED,
+    val system: Boolean = false,
     val customLabel: String? = null,
 ) {
     val key: String get() = "${component.flattenToShortString()}#${user.hashCode()}"

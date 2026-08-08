@@ -60,4 +60,6 @@
     <string name="search_web">Pesquisar «%1$s» online</string>
     <string name="another_backdrop">Outra foto</string>
     <string name="photo_credit">Foto: %1$s · Unsplash</string>
+    <string name="uninstall">Desinstalar</string>
+    <string name="uninstall_hint">Remove a app do telefone</string>
 </resources>

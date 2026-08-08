@@ -60,4 +60,6 @@
     <string name="search_web">Шукати «%1$s» в інтернеті</string>
     <string name="another_backdrop">Інший кадр</string>
     <string name="photo_credit">Фото: %1$s · Unsplash</string>
+    <string name="uninstall">Видалити застосунок</string>
+    <string name="uninstall_hint">Прибере застосунок із телефона</string>
 </resources>

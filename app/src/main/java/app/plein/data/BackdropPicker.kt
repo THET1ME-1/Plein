@@ -23,7 +23,6 @@ class BackdropPicker(
                 .takeIf { it.isNotEmpty() }
                 ?.let { library.fromFolder(it, current) }
             BackdropOrigin.Openverse -> fromNetwork(dark, weatherCode)
-            BackdropOrigin.Bundled -> null
         }
         return fresh ?: Backdrops.next(current, dark)
     }

@@ -173,6 +173,31 @@ private fun DreamFace(prefs: Prefs) {
     val time = SimpleDateFormat(if (prefs.clockTwentyFour) "HH:mm" else "h:mm a", locale).format(now)
     val date = SimpleDateFormat("EEEE, d MMMM", locale).format(now)
 
+    DreamContent(
+        time = time,
+        date = date,
+        photo = photo,
+        clockFamily = clockFamily,
+        shiftX = shiftX,
+        shiftY = shiftY,
+    )
+}
+
+/**
+ * Что видно на заставке.
+ *
+ * Отдельно от службы: тут нет ни таймеров, ни чтения файлов, поэтому эту
+ * часть можно снять на снимок и сверять при каждой правке.
+ */
+@Composable
+fun DreamContent(
+    time: String,
+    date: String,
+    photo: ImageBitmap?,
+    clockFamily: androidx.compose.ui.text.font.FontFamily?,
+    shiftX: Float = 0f,
+    shiftY: Float = 0f,
+) {
     Box(
         Modifier
             .fillMaxSize()

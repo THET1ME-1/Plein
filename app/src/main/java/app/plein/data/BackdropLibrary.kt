@@ -9,11 +9,14 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.Calendar
 
-/** Откуда лаунчер берёт кадры. */
+/**
+ * Откуда лаунчер берёт кадры.
+ *
+ * По умолчанию — фотобанк: лаунчер про то и есть, что каждый раз новый вид.
+ * Вшитые фотографии в этом списке не значатся, они остались запасом на случай,
+ * когда сети нет вовсе.
+ */
 enum class BackdropOrigin {
-    /** Четыре фотографии, вшитые в сборку. */
-    Bundled,
-
     /** Openverse: свободные лицензии, ключ не нужен. */
     Openverse,
 
@@ -25,7 +28,7 @@ enum class BackdropOrigin {
 
     companion object {
         fun of(name: String?): BackdropOrigin =
-            entries.firstOrNull { it.name.equals(name, ignoreCase = true) } ?: Bundled
+            entries.firstOrNull { it.name.equals(name, ignoreCase = true) } ?: Openverse
     }
 }
 

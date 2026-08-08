@@ -23,37 +23,42 @@ class BackdropSource(private val context: Context) {
     private val seen = mutableSetOf<String>()
 
     /**
-     * Новый кадр под тему.
+     * Новый кадр.
      *
-     * Тему подбираем яркостью самой фотографии: сервис такого фильтра не даёт,
-     * поэтому качаем кандидатов и меряем сами. Уже показанные пропускаем,
-     * иначе кнопка начнёт возвращать одно и то же.
+     * Яркость — предпочтение, а не пропуск. Раньше кадр светлее или темнее
+     * нужного выбрасывался, и на светлой теме не подходил почти никто: пейзажи
+     * в основном тёмные, все кандидаты улетали в мусор, а человек видел вшитую
+     * фотографию вместо новой. Теперь неподошедший кадр держим про запас и
+     * отдаём его, если лучше ничего не нашлось.
      */
     suspend fun next(
         dark: Boolean,
         queries: List<String> = QUERIES,
     ): Backdrop? = withContext(Dispatchers.IO) {
+        var spare: Backdrop? = null
+
         repeat(3) {
             val candidates = runCatching { search(queries.random(), randomPage()) }.getOrDefault(emptyList())
             candidates.shuffled().forEach { candidate ->
                 if (candidate.id in seen) return@forEach
                 val file = runCatching { download(candidate) }.getOrNull() ?: return@forEach
                 val luminance = luminanceOf(file) ?: return@forEach
-                val fits = if (dark) luminance <= 0.45f else luminance > 0.38f
-                if (!fits) {
-                    file.delete()
-                    return@forEach
-                }
-                seen += candidate.id
-                return@withContext Backdrop(
+                val found = Backdrop(
                     file = file,
                     author = candidate.author,
                     credit = candidate.credit,
                     luminance = luminance,
                 )
+                val fits = if (dark) luminance <= 0.5f else luminance > 0.3f
+                if (!fits) {
+                    if (spare == null) spare = found
+                    return@forEach
+                }
+                seen += candidate.id
+                return@withContext found
             }
         }
-        null
+        spare
     }
 
     private data class Candidate(

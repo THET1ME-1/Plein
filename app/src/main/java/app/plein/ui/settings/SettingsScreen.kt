@@ -235,11 +235,11 @@ fun SettingsScreen(
                         LazyVerticalGrid(
                             columns = GridCells.Fixed(4),
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp),
                             userScrollEnabled = false,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(if (allShapes) 430.dp else 110.dp),
+                                .height(if (allShapes) 470.dp else 122.dp),
                         ) {
                             items(shapes, key = { it.name }) { option ->
                                 ShapeCell(
@@ -527,7 +527,7 @@ fun SettingsScreen(
                                             app.plein.data.BackdropOrigin.Openverse -> R.string.backdrop_openverse
                                             app.plein.data.BackdropOrigin.Gallery -> R.string.backdrop_gallery
                                             app.plein.data.BackdropOrigin.Folder -> R.string.backdrop_folder
-                                            else -> R.string.backdrop_bundled
+                                            else -> R.string.backdrop_openverse
                                         }
                                     ),
                                     style = MaterialTheme.typography.labelLarge.copy(fontSize = 11.sp),
@@ -833,7 +833,7 @@ private fun IconAction(
 }
 
 @Composable
-private fun ShapeCell(option: IconShape, selected: Boolean, onClick: () -> Unit) {
+internal fun ShapeCell(option: IconShape, selected: Boolean, onClick: () -> Unit) {
     val haptics = app.plein.ui.rememberHaptics()
     // Выбранная форма чуть крупнее и приходит пружиной: видно, что нажатие
     // дошло, даже когда две формы похожи.
@@ -852,9 +852,15 @@ private fun ShapeCell(option: IconShape, selected: Boolean, onClick: () -> Unit)
             onClick()
         },
     ) {
+        // Фигура растёт внутри клетки с запасом: раньше она масштабировалась
+        // до края ячейки, и у выбранной срезало макушку с подбородком.
+        Box(
+            Modifier.size(64.dp),
+            contentAlignment = Alignment.Center,
+        ) {
         Box(
             Modifier
-                .size(58.dp)
+                .size(54.dp)
                 .scale(scale)
                 .clip(option.shape())
                 .background(
@@ -862,6 +868,7 @@ private fun ShapeCell(option: IconShape, selected: Boolean, onClick: () -> Unit)
                     else MaterialTheme.colorScheme.surfaceContainerHighest
                 )
         )
+        }
         Text(
             text = stringResource(option.titleRes),
             fontSize = 10.5.sp,
@@ -998,6 +1005,16 @@ private fun ChoiceSheet(
                     }
                 }
             }
+        }
+    }
+}
+
+/** Четыре формы для снимка: первая выбрана, как на экране настроек. */
+@Composable
+fun ShapesPreviewPanel() {
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        IconShape.featured.forEachIndexed { index, option ->
+            ShapeCell(option = option, selected = index == 0, onClick = {})
         }
     }
 }

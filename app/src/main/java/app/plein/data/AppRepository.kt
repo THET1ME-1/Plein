@@ -283,7 +283,9 @@ class AppRepository(private val context: Context) {
         mono: MonoStyle? = null,
     ) = withContext(Dispatchers.IO) {
         val entries = _apps.value
-        val gate = Semaphore(4)
+        // Два потока вместо четырёх: на первом запуске сотня значков вместе с
+        // записью на диск занимала все ядра, и экран отвечал рывками.
+        val gate = Semaphore(2)
         coroutineScope {
             entries.map { entry ->
                 async {

@@ -182,7 +182,7 @@ class Prefs(context: Context) {
     }
 
     /** Качать кадры только по Wi-Fi. */
-    var backdropWifiOnly by mutableStateOf(sp.getBoolean(KEY_BACKDROP_WIFI, true))
+    var backdropWifiOnly by mutableStateOf(sp.getBoolean(KEY_BACKDROP_WIFI, false))
         private set
 
     fun updateBackdropWifiOnly(value: Boolean) {

@@ -206,4 +206,6 @@
     <string name="folders_overview">Todas as pastas</string>
     <string name="dream">Protetor de ecrã</string>
     <string name="dream_hint">Relógio enquanto o telefone está na base</string>
+    <string name="loading_percent">%1$d%%</string>
+    <string name="update_downloading">A descarregar %1$d%%</string>
 </resources>

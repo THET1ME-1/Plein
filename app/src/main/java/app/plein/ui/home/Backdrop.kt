@@ -42,7 +42,9 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.res.stringResource
@@ -79,9 +81,10 @@ fun Backdrop(
     clockFont: String,
     onShuffle: () -> Unit,
     loading: Boolean = false,
+    loadingProgress: Float = 0f,
     onOpenSettings: () -> Unit,
     onSeedExtracted: (Color) -> Unit,
-    onSwipeDown: () -> Unit = {},
+    onSwipeDown: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -91,16 +94,13 @@ fun Backdrop(
     val morph = remember(backdrop.key) { MorphReveal.randomMorph() }
     val reveal = remember(backdrop.key) { Animatable(0f) }
 
-    LaunchedEffect(backdrop.key) {
+    val screenWidth = with(LocalDensity.current) {
+        LocalConfiguration.current.screenWidthDp.dp.roundToPx()
+    }
+
+    LaunchedEffect(backdrop.key, screenWidth) {
         val decoded = withContext(Dispatchers.IO) {
-            runCatching {
-                // Полное разрешение: уменьшение вдвое давало мыло на большом кадре.
-                val options = android.graphics.BitmapFactory.Options()
-                backdrop.file?.let { BitmapFactory.decodeFile(it.path, options) }
-                    ?: backdrop.asset?.let { asset ->
-                        context.assets.open(asset).use { BitmapFactory.decodeStream(it, null, options) }
-                    }
-            }.getOrNull()
+            runCatching { decodeForScreen(context, backdrop, screenWidth) }.getOrNull()
         } ?: return@LaunchedEffect
 
         photo = decoded.asImageBitmap()
@@ -138,6 +138,7 @@ fun Backdrop(
             // Свайп вниз по кадру отдаёт шторку системе. Порог крупный:
             // короткое движение здесь — это оттягивание за новым кадром.
             .pointerInput(onSwipeDown) {
+                if (onSwipeDown == null) return@pointerInput
                 var travelled = 0f
                 detectVerticalDragGestures(
                     onDragStart = { travelled = 0f },
@@ -184,11 +185,29 @@ fun Backdrop(
                 .padding(top = 92.dp)
             val container = Color.White.copy(alpha = 0.22f)
             if (loading) {
-                ContainedLoadingIndicator(
-                    modifier = indicator,
-                    containerColor = container,
-                    indicatorColor = Color.White,
-                )
+                // Пока сервер не сказал размер, ход неизвестен: крутим без
+                // числа, а как пошли байты — показываем проценты.
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = indicator) {
+                    if (loadingProgress > 0f) {
+                        ContainedLoadingIndicator(
+                            progress = { loadingProgress },
+                            containerColor = container,
+                            indicatorColor = Color.White,
+                        )
+                        Text(
+                            text = stringResource(R.string.loading_percent, (loadingProgress * 100).toInt()),
+                            fontFamily = MonoFont,
+                            fontSize = 11.sp,
+                            color = Color.White.copy(alpha = 0.9f),
+                            modifier = Modifier.padding(top = 6.dp),
+                        )
+                    } else {
+                        ContainedLoadingIndicator(
+                            containerColor = container,
+                            indicatorColor = Color.White,
+                        )
+                    }
+                }
             } else {
                 ContainedLoadingIndicator(
                     progress = { pull.coerceIn(0f, 1f) },
@@ -283,6 +302,39 @@ fun Backdrop(
                 .padding(end = 14.dp, bottom = 40.dp),
         )
     }
+}
+
+/**
+ * Кадр под размер экрана.
+ *
+ * Фотографии из банка приходят по три-четыре тысячи точек в ширину: в памяти
+ * это полсотни мегабайт, а на телефоне — рывки, сборка мусора и залипающая
+ * прокрутка. Читаем размеры, считаем степень двойки и декодируем сразу
+ * маленьким — по ширине экрана с запасом в полтора раза на зум шапки.
+ */
+private fun decodeForScreen(
+    context: android.content.Context,
+    backdrop: Backdrop,
+    screenWidth: Int,
+): android.graphics.Bitmap? {
+    fun open(): java.io.InputStream? = when {
+        backdrop.file != null -> backdrop.file.inputStream()
+        backdrop.asset != null -> context.assets.open(backdrop.asset)
+        else -> null
+    }
+
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    open()?.use { BitmapFactory.decodeStream(it, null, bounds) } ?: return null
+
+    val target = (screenWidth * 1.5f).toInt().coerceAtLeast(720)
+    var sample = 1
+    while (bounds.outWidth / (sample * 2) >= target) sample *= 2
+
+    val options = BitmapFactory.Options().apply {
+        inSampleSize = sample
+        inPreferredConfig = android.graphics.Bitmap.Config.ARGB_8888
+    }
+    return open()?.use { BitmapFactory.decodeStream(it, null, options) }
 }
 
 @OptIn(ExperimentalFoundationApi::class)

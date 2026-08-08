@@ -206,4 +206,6 @@
     <string name="folders_overview">Все папки</string>
     <string name="dream">Заставка</string>
     <string name="dream_hint">Часы, пока телефон стоит на подставке</string>
+    <string name="loading_percent">%1$d%%</string>
+    <string name="update_downloading">Качаю %1$d%%</string>
 </resources>

@@ -206,4 +206,6 @@
     <string name="folders_overview">All folders</string>
     <string name="dream">Screen saver</string>
     <string name="dream_hint">Clock while the phone rests on a dock</string>
+    <string name="loading_percent">%1$d%%</string>
+    <string name="update_downloading">Downloading %1$d%%</string>
 </resources>

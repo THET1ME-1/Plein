@@ -206,4 +206,6 @@
     <string name="folders_overview">Усі теки</string>
     <string name="dream">Заставка</string>
     <string name="dream_hint">Годинник, поки телефон на підставці</string>
+    <string name="loading_percent">%1$d%%</string>
+    <string name="update_downloading">Завантажую %1$d%%</string>
 </resources>

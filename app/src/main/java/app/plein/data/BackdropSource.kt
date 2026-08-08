@@ -34,6 +34,7 @@ class BackdropSource(private val context: Context) {
     suspend fun next(
         dark: Boolean,
         queries: List<String> = QUERIES,
+        onProgress: (Float) -> Unit = {},
     ): Backdrop? = withContext(Dispatchers.IO) {
         var spare: Backdrop? = null
 
@@ -41,7 +42,7 @@ class BackdropSource(private val context: Context) {
             val candidates = runCatching { search(queries.random(), randomPage()) }.getOrDefault(emptyList())
             candidates.shuffled().forEach { candidate ->
                 if (candidate.id in seen) return@forEach
-                val file = runCatching { download(candidate) }.getOrNull() ?: return@forEach
+                val file = runCatching { download(candidate, onProgress) }.getOrNull() ?: return@forEach
                 val luminance = luminanceOf(file) ?: return@forEach
                 val found = Backdrop(
                     file = file,
@@ -103,7 +104,7 @@ class BackdropSource(private val context: Context) {
         }
     }
 
-    private fun download(candidate: Candidate): File {
+    private fun download(candidate: Candidate, onProgress: (Float) -> Unit = {}): File {
         val target = File(cacheDir, candidate.id.take(24) + ".jpg")
         if (target.exists() && target.length() > 0) return target
 
@@ -114,8 +115,21 @@ class BackdropSource(private val context: Context) {
             setRequestProperty("User-Agent", USER_AGENT)
         }
         connection.use { open ->
+            // Сервер не всегда говорит размер: тогда показываем неопределённый
+            // ход, а не врём процентами.
+            val total = open.contentLength.toLong()
             open.inputStream.use { input ->
-                target.outputStream().use { output -> input.copyTo(output) }
+                target.outputStream().use { output ->
+                    val buffer = ByteArray(16 * 1024)
+                    var done = 0L
+                    while (true) {
+                        val read = input.read(buffer)
+                        if (read < 0) break
+                        output.write(buffer, 0, read)
+                        done += read
+                        if (total > 0) onProgress((done.toFloat() / total).coerceIn(0f, 1f))
+                    }
+                }
             }
         }
         trimCache()

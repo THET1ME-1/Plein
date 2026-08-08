@@ -108,7 +108,11 @@ object Updates {
     }
 
     /** Скачиваем в кэш: файл переживёт поворот экрана и уход в фон. */
-    suspend fun download(context: Context, update: Update): File? = withContext(Dispatchers.IO) {
+    suspend fun download(
+        context: Context,
+        update: Update,
+        onProgress: (Float) -> Unit = {},
+    ): File? = withContext(Dispatchers.IO) {
         runCatching {
             val target = File(context.cacheDir, "plein-${update.version}.apk")
             if (target.exists() && target.length() == update.size) return@withContext target
@@ -120,7 +124,17 @@ object Updates {
                 setRequestProperty("User-Agent", AGENT)
             }
             connection.inputStream.use { input ->
-                target.outputStream().use { output -> input.copyTo(output) }
+                target.outputStream().use { output ->
+                    val buffer = ByteArray(32 * 1024)
+                    var done = 0L
+                    while (true) {
+                        val read = input.read(buffer)
+                        if (read < 0) break
+                        output.write(buffer, 0, read)
+                        done += read
+                        if (update.size > 0) onProgress((done.toFloat() / update.size).coerceIn(0f, 1f))
+                    }
+                }
             }
             connection.disconnect()
             target

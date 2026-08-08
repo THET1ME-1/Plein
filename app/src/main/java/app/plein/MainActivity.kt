@@ -17,6 +17,7 @@ import androidx.compose.runtime.withFrameNanos
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -107,6 +108,7 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
             var editing by remember { mutableStateOf(false) }
             var isDefault by remember { mutableStateOf(DefaultLauncher.isDefault(context)) }
             var loadingBackdrop by remember { mutableStateOf(false) }
+            var backdropProgress by remember { mutableFloatStateOf(0f) }
             var weatherTemp by remember { mutableStateOf<String?>(null) }
             var weatherCode by remember { mutableIntStateOf(0) }
             var weatherTick by remember { mutableIntStateOf(0) }
@@ -145,10 +147,14 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                     scope.launch {
                         loadingBackdrop = true
                         try {
-                            backdrop = backdropPicker.next(backdrop, dark, weatherCode)
+                            backdropProgress = 0f
+                            backdrop = backdropPicker.next(backdrop, dark, weatherCode) { done ->
+                                backdropProgress = done
+                            }
                             prefs.saveBackdrop(backdrop)
                         } finally {
                             loadingBackdrop = false
+                            backdropProgress = 0f
                         }
                     }
                 }
@@ -171,8 +177,10 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
 
             val runUpdate: (app.plein.data.Update) -> Unit = { update ->
                 scope.launch {
-                    updateState = getString(R.string.updating)
-                    val file = app.plein.data.Updates.download(context, update)
+                    updateState = getString(R.string.update_downloading, 0)
+                    val file = app.plein.data.Updates.download(context, update) { done ->
+                        updateState = getString(R.string.update_downloading, (done * 100).toInt())
+                    }
                     if (file == null) {
                         updateState = getString(R.string.update_failed)
                         haptics.reject()
@@ -356,7 +364,7 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                     if (apps.isEmpty()) return@LaunchedEffect
                     // Ждём первый кадр: иначе прогрев спорит с отрисовкой экрана.
                     withFrameNanos { }
-                    delay(250)
+                    delay(600)
                     val sizePx = with(density) { iconSizeFor(prefs.columns).roundToPx() }
                     repository.preloadIcons(
                         sizePx = sizePx,
@@ -387,6 +395,7 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                     // Нажатие идёт в фотобанк за новым кадром; без сети остаются вшитые.
                     onShuffleBackdrop = loadBackdrop,
                     loadingBackdrop = loadingBackdrop,
+                    loadingProgress = backdropProgress,
                     onSeedExtracted = { seed = it },
                     onOpenSearch = { screen = Screen.Search },
                     hiddenCount = hiddenApps.keys.size,

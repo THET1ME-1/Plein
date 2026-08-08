@@ -49,7 +49,9 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.platform.LocalDensity
@@ -141,6 +143,7 @@ fun HomeScreen(
     editing: Boolean,
     onShuffleBackdrop: () -> Unit,
     loadingBackdrop: Boolean,
+    loadingProgress: Float = 0f,
     onSeedExtracted: (androidx.compose.ui.graphics.Color) -> Unit,
     onOpenSearch: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -254,7 +257,7 @@ fun HomeScreen(
             .nestedScroll(nested)
     ) {
         Backdrop(
-            onSwipeDown = onShade,
+            onSwipeDown = if (prefs.gestureShade) onShade else null,
             backdrop = backdrop,
             clockSize = prefs.clockSize,
             twentyFour = prefs.clockTwentyFour,
@@ -265,6 +268,7 @@ fun HomeScreen(
             clockFont = prefs.clockFont,
             onShuffle = onShuffleBackdrop,
             loading = loadingBackdrop,
+            loadingProgress = loadingProgress,
             onOpenSettings = onOpenSettings,
             onSeedExtracted = onSeedExtracted,
             collapse = progress,
@@ -312,14 +316,21 @@ fun HomeScreen(
                     }
                     .pointerInput(prefs.gesturePinch) {
                         if (!prefs.gesturePinch) return@pointerInput
-                        var scale = 1f
-                        detectTransformGestures { _, _, zoom, _ ->
-                            scale *= zoom
-                            // Сводим пальцы заметно, а не чуть-чуть: случайное
-                            // движение по списку не должно открывать обзор.
-                            if (scale < 0.72f) {
-                                scale = 1f
-                                onOverview()
+                        // Ждём именно двух пальцев и ничего не потребляем:
+                        // detectTransformGestures ловил и одиночное движение,
+                        // забирал события у списка и делал прокрутку вязкой.
+                        awaitEachGesture {
+                            awaitFirstDown(requireUnconsumed = false)
+                            var zoom = 1f
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                if (event.changes.none { it.pressed }) break
+                                if (event.changes.size < 2) continue
+                                zoom *= event.calculateZoom()
+                                if (zoom < 0.72f) {
+                                    onOverview()
+                                    break
+                                }
                             }
                         }
                     },

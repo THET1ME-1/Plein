@@ -206,4 +206,6 @@
     <string name="folders_overview">Tous les dossiers</string>
     <string name="dream">Économiseur d\'écran</string>
     <string name="dream_hint">Horloge quand le téléphone est sur son socle</string>
+    <string name="loading_percent">%1$d%%</string>
+    <string name="update_downloading">Téléchargement %1$d%%</string>
 </resources>

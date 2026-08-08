@@ -206,4 +206,6 @@
     <string name="folders_overview">Tutte le cartelle</string>
     <string name="dream">Salvaschermo</string>
     <string name="dream_hint">Orologio mentre il telefono è sulla base</string>
+    <string name="loading_percent">%1$d%%</string>
+    <string name="update_downloading">Scarico %1$d%%</string>
 </resources>

@@ -230,4 +230,7 @@
     <string name="no_events">Сьогодні без подій</string>
     <string name="row_auto">Сама</string>
     <string name="row_height_hint">Клітинка росте разом зі значком</string>
+    <string name="add_widget">Додати віджет</string>
+    <string name="widgets">Віджети</string>
+    <string name="widget_failed">Віджет не вдалося прив\'язати</string>
 </resources>

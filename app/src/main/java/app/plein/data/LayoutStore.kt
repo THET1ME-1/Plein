@@ -30,6 +30,18 @@ class LayoutStore(context: Context) {
         save(folderId, current + Placement(CellItem.Tile(kind), cell))
     }
 
+    /** Виджет приложения: размер приходит от самого приложения. */
+    fun addWidget(folderId: String, widgetId: Int, width: Int, height: Int, columns: Int) {
+        val current = tiles(folderId)
+        val cell = CellLayout.firstFree(
+            taken = current.map { it.cell },
+            columns = columns,
+            width = width.coerceAtMost(columns),
+            height = height,
+        )
+        save(folderId, current + Placement(CellItem.Widget(widgetId), cell))
+    }
+
     fun remove(folderId: String, item: CellItem) {
         save(folderId, tiles(folderId).filterNot { it.item.id == item.id })
     }

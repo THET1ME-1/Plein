@@ -73,12 +73,13 @@ class TilesScreenshotTest : ScreenshotTest() {
                 modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
             ) { placement ->
                 when (val item = placement.item) {
+                    is CellItem.Widget -> TileSurface {}
                     is CellItem.App -> FakeIcon(item.key.removePrefix("app").toInt())
                     is CellItem.Tile -> when (item.kind) {
-                        Tiles.CLOCK -> ClockTile(time = "20:41", date = "СБ, 8 АВГ", onClick = {})
+                        Tiles.CLOCK -> ClockTile(time = "20:41", date = "СБ, 8 АВГ")
                         Tiles.BATTERY -> BatteryTile(percent = 64, charging = true)
-                        Tiles.CALENDAR -> CalendarTile(title = "Созвон с командой", time = "21:30", onClick = {})
-                        Tiles.WEATHER -> WeatherTile(temperature = "28°", code = 0, place = "Кишинёв", onClick = {})
+                        Tiles.CALENDAR -> CalendarTile(title = "Созвон с командой", time = "21:30")
+                        Tiles.WEATHER -> WeatherTile(temperature = "28°", code = 0, place = "Кишинёв")
                         else -> TileSurface {}
                     }
                 }

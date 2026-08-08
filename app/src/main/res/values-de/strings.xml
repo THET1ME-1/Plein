@@ -230,4 +230,7 @@
     <string name="no_events">Heute nichts</string>
     <string name="row_auto">Auto</string>
     <string name="row_height_hint">Zelle wächst mit dem Symbol</string>
+    <string name="add_widget">Widget hinzufügen</string>
+    <string name="widgets">Widgets</string>
+    <string name="widget_failed">Widget ließ sich nicht binden</string>
 </resources>

@@ -36,6 +36,11 @@ sealed interface CellItem {
     data class Tile(val kind: String) : CellItem {
         override val id: String get() = "tile:$kind"
     }
+
+    /** Виджет установленного приложения. Номер выдаёт система при привязке. */
+    data class Widget(val widgetId: Int) : CellItem {
+        override val id: String get() = "widget:$widgetId"
+    }
 }
 
 data class Placement(val item: CellItem, val cell: Cell)
@@ -113,27 +118,33 @@ object CellLayout {
     fun encode(tiles: List<Placement>): String {
         val array = JSONArray()
         tiles.forEach { placement ->
-            val item = placement.item
-            if (item !is CellItem.Tile) return@forEach
-            array.put(
-                JSONObject().apply {
-                    put("kind", item.kind)
-                    put("row", placement.cell.row)
-                    put("col", placement.cell.col)
-                    put("w", placement.cell.width)
-                    put("h", placement.cell.height)
-                }
-            )
+            val body = JSONObject().apply {
+                put("row", placement.cell.row)
+                put("col", placement.cell.col)
+                put("w", placement.cell.width)
+                put("h", placement.cell.height)
+            }
+            when (val item = placement.item) {
+                is CellItem.Tile -> body.put("kind", item.kind)
+                is CellItem.Widget -> body.put("widget", item.widgetId)
+                else -> return@forEach
+            }
+            array.put(body)
         }
         return array.toString()
     }
 
     fun decode(raw: String?): List<Placement> = runCatching {
         val array = JSONArray(raw ?: return emptyList())
-        (0 until array.length()).map { index ->
+        (0 until array.length()).mapNotNull { index ->
             val item = array.getJSONObject(index)
+            val what = when {
+                item.has("widget") -> CellItem.Widget(item.getInt("widget"))
+                item.has("kind") -> CellItem.Tile(item.getString("kind"))
+                else -> return@mapNotNull null
+            }
             Placement(
-                item = CellItem.Tile(item.getString("kind")),
+                item = what,
                 cell = Cell(
                     row = item.getInt("row"),
                     col = item.getInt("col"),

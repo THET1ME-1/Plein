@@ -1,7 +1,6 @@
 package app.plein.ui.home
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -61,26 +60,24 @@ object Tiles {
 fun TileSurface(
     modifier: Modifier = Modifier,
     container: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.surfaceContainerHigh,
-    onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
+    // Нажатия плитка не ловит: и короткое, и долгое разбирает страница. Иначе
+    // внутренний обработчик съедал удержание, и вместо захвата открывалось
+    // приложение.
     Box(
         modifier
             .fillMaxSize()
             .padding(4.dp)
             .clip(RoundedCornerShape(26.dp))
             .background(container)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(14.dp),
     ) { content() }
 }
 
 @Composable
-fun ClockTile(time: String, date: String, onClick: () -> Unit) {
-    TileSurface(
-        container = MaterialTheme.colorScheme.primaryContainer,
-        onClick = onClick,
-    ) {
+fun ClockTile(time: String, date: String) {
+    TileSurface(container = MaterialTheme.colorScheme.primaryContainer) {
         Column(
             verticalArrangement = Arrangement.Bottom,
             modifier = Modifier.fillMaxSize(),
@@ -106,8 +103,8 @@ fun ClockTile(time: String, date: String, onClick: () -> Unit) {
 }
 
 @Composable
-fun WeatherTile(temperature: String?, code: Int, place: String, onClick: () -> Unit) {
-    TileSurface(onClick = onClick) {
+fun WeatherTile(temperature: String?, code: Int, place: String) {
+    TileSurface {
         Column(Modifier.fillMaxSize()) {
             Icon(
                 weatherIcon(code),
@@ -172,8 +169,8 @@ fun BatteryTile(percent: Int, charging: Boolean) {
 }
 
 @Composable
-fun CalendarTile(title: String, time: String, onClick: () -> Unit) {
-    TileSurface(onClick = onClick) {
+fun CalendarTile(title: String, time: String) {
+    TileSurface {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth(),
@@ -205,11 +202,8 @@ fun CalendarTile(title: String, time: String, onClick: () -> Unit) {
 }
 
 @Composable
-fun NoteTile(text: String, onClick: () -> Unit) {
-    TileSurface(
-        container = MaterialTheme.colorScheme.secondaryContainer,
-        onClick = onClick,
-    ) {
+fun NoteTile(text: String) {
+    TileSurface(container = MaterialTheme.colorScheme.secondaryContainer) {
         Column(Modifier.fillMaxSize()) {
             Icon(
                 Icons.Rounded.EditNote,

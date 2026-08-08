@@ -30,16 +30,33 @@ object Voice {
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
         }
 
-    /** Есть ли кому слушать. */
+    /**
+     * Есть ли кому слушать.
+     *
+     * Спрашиваем систему напрямую: на прошивках без сервисов Google интент
+     * распознавания иногда разрешается в чужой экран, который речь не слышит,
+     * и кнопка вела человека в настройки вместо микрофона.
+     */
     fun available(context: Context): Boolean =
-        recognizeIntent(context).resolveActivity(context.packageManager) != null
+        android.speech.SpeechRecognizer.isRecognitionAvailable(context) &&
+            recognizeIntent(context).resolveActivity(context.packageManager) != null
 
     /** Запасной ход: голосовой помощник системы. */
     fun assistantIntent(): Intent =
         Intent(Intent.ACTION_VOICE_COMMAND).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
-    fun assistantAvailable(context: Context): Boolean =
-        assistantIntent().resolveActivity(context.packageManager) != null
+    /**
+     * Настоящий помощник, а не экран его выбора.
+     *
+     * `ACTION_VOICE_COMMAND` на телефоне без помощника разрешается в системные
+     * настройки: кнопка формально работала, а человек попадал на страницу
+     * «Цифровой помощник: Нет».
+     */
+    fun assistantAvailable(context: Context): Boolean {
+        val target = context.packageManager.resolveActivity(assistantIntent(), 0) ?: return false
+        val pkg = target.activityInfo?.packageName.orEmpty()
+        return pkg.isNotEmpty() && !pkg.contains("settings", ignoreCase = true)
+    }
 
     /** Первый распознанный вариант. Пусто — человек промолчал или отменил. */
     fun textOf(data: Intent?): String =

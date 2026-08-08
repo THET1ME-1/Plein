@@ -230,4 +230,7 @@
     <string name="no_events">Rien aujourd\'hui</string>
     <string name="row_auto">Auto</string>
     <string name="row_height_hint">La cellule suit la taille des icônes</string>
+    <string name="add_widget">Ajouter un widget</string>
+    <string name="widgets">Widgets</string>
+    <string name="widget_failed">Le widget n\'a pas pu être lié</string>
 </resources>

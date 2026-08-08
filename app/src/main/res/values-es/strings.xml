@@ -230,4 +230,7 @@
     <string name="no_events">Hoy sin eventos</string>
     <string name="row_auto">Auto</string>
     <string name="row_height_hint">La celda crece con el icono</string>
+    <string name="add_widget">Añadir widget</string>
+    <string name="widgets">Widgets</string>
+    <string name="widget_failed">No se pudo vincular el widget</string>
 </resources>

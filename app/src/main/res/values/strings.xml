@@ -230,4 +230,7 @@
     <string name="no_events">No events today</string>
     <string name="row_auto">Auto</string>
     <string name="row_height_hint">Cells grow with the icons</string>
+    <string name="add_widget">Add a widget</string>
+    <string name="widgets">Widgets</string>
+    <string name="widget_failed">Widget could not be bound</string>
 </resources>

@@ -1,8 +1,12 @@
 package app.plein.ui.home
 
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,8 +37,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
@@ -46,6 +48,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import app.plein.data.AppEntry
 import app.plein.data.AppRepository
+import app.plein.ui.rememberHaptics
 
 /**
  * Сетка приложений.
@@ -79,7 +82,7 @@ fun AppsGrid(
     var pointerNow by remember { mutableStateOf(Offset.Zero) }
     var anchorOffset by remember { mutableStateOf(IntOffset.Zero) }
 
-    val haptics = LocalHapticFeedback.current
+    val haptics = rememberHaptics()
 
     LaunchedEffect(editing) {
         if (!editing) draggedKey = null
@@ -107,7 +110,7 @@ fun AppsGrid(
                 pointerStart = start
                 pointerNow = start
                 anchorOffset = IntOffset(info.offset.x, info.offset.y)
-                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                haptics.longPress()
             },
             onDrag = { change, amount ->
                 change.consume()
@@ -118,11 +121,14 @@ fun AppsGrid(
                 val target = itemAt(change.position)?.index ?: return@detectDragGesturesAfterLongPress
                 if (from >= 0 && target != from && target in items.indices) {
                     items.add(target, items.removeAt(from))
-                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    haptics.tick()
                 }
             },
             onDragEnd = {
-                if (draggedKey != null) onReorder(items.toList())
+                if (draggedKey != null) {
+                    onReorder(items.toList())
+                    haptics.confirm()
+                }
                 draggedKey = null
             },
             onDragCancel = { draggedKey = null },
@@ -164,7 +170,10 @@ fun AppsGrid(
                 // долгий тап и до жеста перетаскивания дело не доходит.
                 interactive = !editing,
                 onClick = { onClick(entry) },
-                onLongClick = { onLongClick(entry) },
+                onLongClick = {
+                    haptics.longPress()
+                    onLongClick(entry)
+                },
                 modifier = Modifier
                     .zIndex(if (dragging) 1f else 0f)
                     .graphicsLayer {
@@ -201,17 +210,35 @@ private fun AppCell(
 ) {
     val wobble by animateFloatAsState(if (wobbling) 1f else 0f, label = "wobble")
 
+    // Значок проседает под пальцем и возвращается пружиной: нажатие видно
+    // раньше, чем приложение успевает открыться.
+    val interactions = remember { MutableInteractionSource() }
+    val pressed by interactions.collectIsPressedAsState()
+    val press by animateFloatAsState(
+        targetValue = if (pressed) 0.9f else 1f,
+        animationSpec = spring(dampingRatio = 0.45f, stiffness = Spring.StiffnessMediumLow),
+        label = "press",
+    )
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
             .fillMaxWidth()
-            .graphicsLayer { rotationZ = if (wobble > 0f) 2f * wobble else 0f }
+            .graphicsLayer {
+                rotationZ = if (wobble > 0f) 2f * wobble else 0f
+                scaleX = press
+                scaleY = press
+            }
             // Радиус мелкий: подпись стоит у нижнего края и попадала под клип.
             .clip(RoundedCornerShape(14.dp))
             .then(
                 if (interactive) {
-                    Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick)
+                    Modifier.combinedClickable(
+                        interactionSource = interactions,
+                        indication = null,
+                        onClick = onClick,
+                        onLongClick = onLongClick,
+                    )
                 } else {
                     Modifier
                 }

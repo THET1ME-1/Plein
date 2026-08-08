@@ -109,4 +109,12 @@
     <string name="indicator_bar">Barra</string>
     <string name="indicator_numbers">Numeri</string>
     <string name="indicator_none">Nessuno</string>
+    <string name="backup">Backup</string>
+    <string name="backup_export">Esporta</string>
+    <string name="backup_export_hint">Impostazioni, cartelle e nomi in un file</string>
+    <string name="backup_import">Importa</string>
+    <string name="backup_import_hint">Ripristina da un file</string>
+    <string name="backup_saved">Backup salvato</string>
+    <string name="backup_restored">Backup ripristinato</string>
+    <string name="backup_failed">Questo file non va</string>
 </resources>

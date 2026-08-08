@@ -109,4 +109,12 @@
     <string name="indicator_bar">Полоса</string>
     <string name="indicator_numbers">Числа</string>
     <string name="indicator_none">Нет</string>
+    <string name="backup">Резервная копия</string>
+    <string name="backup_export">Экспорт</string>
+    <string name="backup_export_hint">Настройки, папки и имена в файл</string>
+    <string name="backup_import">Импорт</string>
+    <string name="backup_import_hint">Восстановить из файла</string>
+    <string name="backup_saved">Копия записана</string>
+    <string name="backup_restored">Копия восстановлена</string>
+    <string name="backup_failed">Файл не подошёл</string>
 </resources>

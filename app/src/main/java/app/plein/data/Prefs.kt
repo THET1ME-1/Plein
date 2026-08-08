@@ -198,6 +198,39 @@ class Prefs(context: Context) {
         sp.edit().putBoolean(KEY_SEED_FROM_PHOTO, value).apply()
     }
 
+    /**
+     * Последний показанный кадр.
+     *
+     * Без него любой возврат в лаунчер начинался с вшитой фотографии: система
+     * убивает процесс за спиной, и скачанный кадр пропадал вместе с ним.
+     * Вшитые кадры не запоминаем, они и так подбираются под тему.
+     */
+    fun savedBackdrop(): Backdrop? {
+        val path = sp.getString(KEY_BACKDROP_FILE, null) ?: return null
+        val file = java.io.File(path)
+        if (!file.exists() || file.length() == 0L) return null
+        return Backdrop(
+            file = file,
+            author = sp.getString(KEY_BACKDROP_AUTHOR, null).orEmpty(),
+            credit = sp.getString(KEY_BACKDROP_CREDIT, null).orEmpty(),
+            luminance = sp.getFloat(KEY_BACKDROP_LUMINANCE, 0.5f),
+        )
+    }
+
+    fun saveBackdrop(backdrop: Backdrop) {
+        val file = backdrop.file
+        if (file == null) {
+            sp.edit().remove(KEY_BACKDROP_FILE).apply()
+            return
+        }
+        sp.edit()
+            .putString(KEY_BACKDROP_FILE, file.path)
+            .putString(KEY_BACKDROP_AUTHOR, backdrop.author)
+            .putString(KEY_BACKDROP_CREDIT, backdrop.credit)
+            .putFloat(KEY_BACKDROP_LUMINANCE, backdrop.luminance)
+            .apply()
+    }
+
     private companion object {
         const val KEY_SHAPE = "icon_shape"
         const val KEY_COLUMNS = "columns"
@@ -219,6 +252,10 @@ class Prefs(context: Context) {
         const val KEY_WEATHER_APP = "weather_app"
         const val KEY_LANGUAGE = "language"
         const val KEY_PAGE_INDICATOR = "page_indicator"
+        const val KEY_BACKDROP_FILE = "backdrop_file"
+        const val KEY_BACKDROP_AUTHOR = "backdrop_author"
+        const val KEY_BACKDROP_CREDIT = "backdrop_credit"
+        const val KEY_BACKDROP_LUMINANCE = "backdrop_luminance"
 
         /** Амбра из Wickly: тёплая и спокойная в обеих темах. */
         const val DEFAULT_SEED = 0xFFC0863E.toInt()

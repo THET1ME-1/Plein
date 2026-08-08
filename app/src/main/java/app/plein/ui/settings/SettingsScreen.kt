@@ -33,6 +33,7 @@ import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.Contrast
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.DriveFileRenameOutline
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.FormatSize
@@ -45,6 +46,7 @@ import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.TextFields
+import androidx.compose.material.icons.rounded.Upload
 import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -58,6 +60,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -90,6 +93,8 @@ fun SettingsScreen(
     onRenameFolder: (String, String) -> Unit,
     onDeleteFolder: (String) -> Unit,
     onMoveFolder: (Int, Int) -> Unit,
+    onExportBackup: () -> Unit,
+    onImportBackup: () -> Unit,
 ) {
     var picking by remember { mutableStateOf(false) }
     var pickingLanguage by remember { mutableStateOf(false) }
@@ -452,6 +457,25 @@ fun SettingsScreen(
             }
 
             item {
+                SettingsSection(stringResource(R.string.backup)) {
+                    SettingsRow(
+                        icon = Icons.Rounded.Upload,
+                        title = stringResource(R.string.backup_export),
+                        subtitle = stringResource(R.string.backup_export_hint),
+                        place = RowPlace.First,
+                        onClick = onExportBackup,
+                    )
+                    SettingsRow(
+                        icon = Icons.Rounded.Download,
+                        title = stringResource(R.string.backup_import),
+                        subtitle = stringResource(R.string.backup_import_hint),
+                        place = RowPlace.Last,
+                        onClick = onImportBackup,
+                    )
+                }
+            }
+
+            item {
                 SettingsSection(stringResource(R.string.about)) {
                     SettingsRow(
                         icon = Icons.Rounded.Code,
@@ -555,13 +579,28 @@ private fun IconAction(
 
 @Composable
 private fun ShapeCell(option: IconShape, selected: Boolean, onClick: () -> Unit) {
+    val haptics = app.plein.ui.rememberHaptics()
+    // Выбранная форма чуть крупнее и приходит пружиной: видно, что нажатие
+    // дошло, даже когда две формы похожи.
+    val scale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (selected) 1.06f else 1f,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = 0.4f,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow,
+        ),
+        label = "shape",
+    )
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable(onClick = onClick),
+        modifier = Modifier.clickable {
+            if (!selected) haptics.toggle(true)
+            onClick()
+        },
     ) {
         Box(
             Modifier
                 .size(58.dp)
+                .scale(scale)
                 .clip(option.shape())
                 .background(
                     if (selected) MaterialTheme.colorScheme.primary

@@ -7,6 +7,11 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.withFrameNanos
@@ -35,6 +40,8 @@ import app.plein.ui.search.SearchScreen
 import app.plein.ui.settings.SettingsScreen
 import app.plein.ui.theme.DefaultSeed
 import app.plein.ui.theme.PleinTheme
+import app.plein.ui.theme.entering
+import app.plein.ui.theme.exiting
 import app.plein.ui.theme.isDark
 import androidx.compose.ui.graphics.Color
 
@@ -75,7 +82,11 @@ class MainActivity : ComponentActivity() {
             val dark = prefs.themeMode.isDark(isSystemInDarkTheme())
 
             var seed by remember { mutableStateOf(DefaultSeed) }
-            var backdrop by remember { mutableStateOf(Backdrops.firstFor(dark)) }
+            // Кадр поднимаем с диска: нажатие «Домой» и убийство процесса
+            // возвращали вшитую фотографию вместо скачанной.
+            var backdrop by remember {
+                mutableStateOf(prefs.savedBackdrop() ?: Backdrops.firstFor(dark))
+            }
             var screen by remember { mutableStateOf(Screen.Home) }
             var menuFor by remember { mutableStateOf<AppEntry?>(null) }
             var editing by remember { mutableStateOf(false) }
@@ -119,7 +130,9 @@ class MainActivity : ComponentActivity() {
                     scope.launch {
                         loadingBackdrop = true
                         try {
-                            backdrop = backdropSource.next(dark) ?: Backdrops.next(backdrop, dark)
+                            val fresh = backdropSource.next(dark)
+                            backdrop = fresh ?: Backdrops.next(backdrop, dark)
+                            prefs.saveBackdrop(backdrop)
                         } finally {
                             loadingBackdrop = false
                         }
@@ -132,6 +145,43 @@ class MainActivity : ComponentActivity() {
             val roleLauncher = rememberLauncherForActivityResult(
                 ActivityResultContracts.StartActivityForResult()
             ) { isDefault = DefaultLauncher.isDefault(context) }
+
+            val haptics = app.plein.ui.rememberHaptics()
+
+            // Копия ходит через системный выбор файла: лаунчеру не нужен доступ
+            // ко всей памяти, человек сам говорит, куда положить и что взять.
+            val exportLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.CreateDocument("application/json")
+            ) { uri ->
+                if (uri == null) return@rememberLauncherForActivityResult
+                val done = app.plein.data.Backup.export(context, uri)
+                if (done) haptics.confirm() else haptics.reject()
+                android.widget.Toast.makeText(
+                    context,
+                    getString(if (done) R.string.backup_saved else R.string.backup_failed),
+                    android.widget.Toast.LENGTH_SHORT,
+                ).show()
+            }
+
+            val importLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.OpenDocument()
+            ) { uri ->
+                if (uri == null) return@rememberLauncherForActivityResult
+                val done = app.plein.data.Backup.import(context, uri)
+                android.widget.Toast.makeText(
+                    context,
+                    getString(if (done) R.string.backup_restored else R.string.backup_failed),
+                    android.widget.Toast.LENGTH_SHORT,
+                ).show()
+                if (done) {
+                    haptics.confirm()
+                    // Настройки читаются один раз при создании, поэтому экран
+                    // пересобираем целиком: иначе половина осталась бы старой.
+                    recreate()
+                } else {
+                    haptics.reject()
+                }
+            }
 
             // Кнопка «Домой» из любого экрана возвращает на главный.
             val homeTick by homeTicks.collectAsState()
@@ -156,7 +206,12 @@ class MainActivity : ComponentActivity() {
                 val sizePx = with(density) { iconSizeFor(prefs.columns).roundToPx() }
                 repository.preloadIcons(sizePx, prefs.iconShape.name, prefs.iconShape.path(sizePx), prefs.iconPack)
             }
-            LaunchedEffect(dark) { backdrop = Backdrops.firstFor(dark) }
+            // Тему сменили — кадр меняем, только если он ей больше не годится.
+            // Безусловная замена стирала скачанный кадр на первом же кадре
+            // композиции, ещё до того, как человек что-то трогал.
+            LaunchedEffect(dark) {
+                if (!Backdrops.fits(backdrop, dark)) backdrop = Backdrops.firstFor(dark)
+            }
 
             // Цвет из кадра перебивает свой seed, пока это не выключено в настройках.
             val activeSeed = if (prefs.seedFromPhoto) seed else Color(prefs.seedColor)
@@ -202,16 +257,28 @@ class MainActivity : ComponentActivity() {
                     onFinishEditing = { editing = false },
                 )
 
-                when (screen) {
-                    Screen.Search -> SearchScreen(
+                // Экраны приезжают снизу и уходят обратно: без перехода
+                // поиск возникал поверх дома щелчком, будто подменили картинку.
+                AnimatedVisibility(
+                    visible = screen == Screen.Search,
+                    enter = slideInVertically(entering()) { it / 6 } + fadeIn(entering()),
+                    exit = slideOutVertically(exiting()) { it / 8 } + fadeOut(exiting()),
+                ) {
+                    SearchScreen(
                         apps = apps,
                         repository = repository,
                         iconShape = prefs.iconShape,
                         onAppMenu = { menuFor = it },
                         onClose = { screen = Screen.Home },
                     )
+                }
 
-                    Screen.Settings -> SettingsScreen(
+                AnimatedVisibility(
+                    visible = screen == Screen.Settings,
+                    enter = slideInVertically(entering()) { it / 6 } + fadeIn(entering()),
+                    exit = slideOutVertically(exiting()) { it / 8 } + fadeOut(exiting()),
+                ) {
+                    SettingsScreen(
                         prefs = prefs,
                         repository = repository,
                         folders = folderStore.folders,
@@ -231,9 +298,9 @@ class MainActivity : ComponentActivity() {
                         onRenameFolder = { id, title -> folderStore.rename(id, title) },
                         onDeleteFolder = { folderStore.delete(it) },
                         onMoveFolder = { from, to -> folderStore.moveFolder(from, to) },
+                        onExportBackup = { exportLauncher.launch(app.plein.data.Backup.fileName()) },
+                        onImportBackup = { importLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) },
                     )
-
-                    Screen.Home -> Unit
                 }
 
                 menuFor?.let { entry ->

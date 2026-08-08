@@ -255,6 +255,7 @@ private fun MenuRow(
     onClick: () -> Unit,
     leading: @Composable () -> Unit,
 ) {
+    val haptics = app.plein.ui.rememberHaptics()
     Surface(
         color = if (highlighted) MaterialTheme.colorScheme.primaryContainer
         else MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -263,7 +264,10 @@ private fun MenuRow(
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 2.dp)
             .clip(RoundedCornerShape(20.dp))
-            .clickable(onClick = onClick),
+            .clickable {
+                haptics.tick()
+                onClick()
+            },
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,

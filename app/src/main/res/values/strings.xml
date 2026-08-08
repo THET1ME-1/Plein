@@ -109,4 +109,12 @@
     <string name="indicator_bar">Bar</string>
     <string name="indicator_numbers">Numbers</string>
     <string name="indicator_none">None</string>
+    <string name="backup">Backup</string>
+    <string name="backup_export">Export</string>
+    <string name="backup_export_hint">Settings, folders and names into a file</string>
+    <string name="backup_import">Import</string>
+    <string name="backup_import_hint">Restore from a file</string>
+    <string name="backup_saved">Backup saved</string>
+    <string name="backup_restored">Backup restored</string>
+    <string name="backup_failed">That file did not fit</string>
 </resources>

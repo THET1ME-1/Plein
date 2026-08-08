@@ -1,5 +1,7 @@
 package app.plein.ui.settings
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -25,6 +27,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,6 +35,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.plein.ui.rememberHaptics
+import app.plein.ui.theme.Emphasized
 
 /**
  * Кирпичи экрана настроек.
@@ -152,13 +157,18 @@ fun SettingsToggleRow(
     place: RowPlace = RowPlace.Single,
     onCheckedChange: (Boolean) -> Unit,
 ) {
+    val haptics = rememberHaptics()
+    val flip: (Boolean) -> Unit = { value ->
+        haptics.toggle(value)
+        onCheckedChange(value)
+    }
     SettingsRow(
         icon = icon,
         title = title,
         subtitle = subtitle,
         place = place,
-        onClick = { onCheckedChange(!checked) },
-        trailing = { Switch(checked = checked, onCheckedChange = onCheckedChange) },
+        onClick = { flip(!checked) },
+        trailing = { Switch(checked = checked, onCheckedChange = flip) },
     )
 }
 
@@ -219,8 +229,16 @@ fun <T> SegmentedPill(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxHeight(),
         ) {
+            val haptics = rememberHaptics()
             values.forEach { value ->
                 val active = value == selected
+                // Заливка переезжает цветом, а не щёлкает: выбор читается как
+                // одно движение по пилюле.
+                val fill by animateColorAsState(
+                    targetValue = if (active) MaterialTheme.colorScheme.primary else Color.Transparent,
+                    animationSpec = tween(220, easing = Emphasized),
+                    label = "segment",
+                )
                 Box(
                     Modifier
                         .weight(1f)
@@ -228,10 +246,11 @@ fun <T> SegmentedPill(
                         // содержимого, заливка уезжает полоской вверх.
                         .fillMaxHeight()
                         .clip(CircleShape)
-                        .background(
-                            if (active) MaterialTheme.colorScheme.primary else Color.Transparent
-                        )
-                        .clickable { onSelect(value) },
+                        .background(fill)
+                        .clickable {
+                            if (!active) haptics.toggle(true)
+                            onSelect(value)
+                        },
                     contentAlignment = Alignment.Center,
                 ) {
                     content(value, active)

@@ -26,7 +26,11 @@ object Backdrops {
         Backdrop(asset = "backdrop_street.jpg", author = "Matthew Skinner", credit = "Matthew Skinner · Unsplash", luminance = 0.19f),
     )
 
-    private const val DARK_LIMIT = 0.42f
+    const val DARK_LIMIT = 0.42f
+
+    /** Годится ли кадр текущей теме. */
+    fun fits(backdrop: Backdrop, dark: Boolean): Boolean =
+        if (dark) backdrop.luminance <= DARK_LIMIT else backdrop.luminance > DARK_LIMIT
 
     /** Тёмная тема просит тёмные кадры: иначе часы тонут в светлом небе. */
     fun next(current: Backdrop?, dark: Boolean): Backdrop {

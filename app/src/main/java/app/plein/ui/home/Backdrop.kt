@@ -19,7 +19,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material3.ContainedLoadingIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -59,7 +62,7 @@ import java.util.Locale
  * Верхняя зона: кадр, затемнение под текст, часы и подпись автора.
  * Размеры из макета: сцена 244, часы от низа 54, подпись от низа 40.
  */
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun Backdrop(
     backdrop: Backdrop,
@@ -81,10 +84,8 @@ fun Backdrop(
     val context = LocalContext.current
     var photo by remember(backdrop.key) { mutableStateOf<ImageBitmap?>(null) }
 
-    // Фигура заготовлена заранее: она крутится знаком загрузки, ею же
-    // растекается пришедший кадр, и только после этого берётся следующая.
-    // Иначе человек тянул одну форму, а на экран выезжала другая.
-    var morph by remember { mutableStateOf(MorphReveal.randomMorph()) }
+    // Каждая смена кадра рисует свою фигуру и растекается ею в прямоугольник.
+    val morph = remember(backdrop.key) { MorphReveal.randomMorph() }
     val reveal = remember(backdrop.key) { Animatable(0f) }
 
     LaunchedEffect(backdrop.key) {
@@ -103,7 +104,6 @@ fun Backdrop(
         val seed = withContext(Dispatchers.Default) { PhotoPalette.seedFrom(decoded) }
         onSeedExtracted(seed)
         reveal.animateTo(1f, tween(650, easing = EmphasizedDecelerate))
-        morph = MorphReveal.randomMorph()
     }
 
     val time = remember(twentyFour) {
@@ -160,19 +160,27 @@ fun Backdrop(
         )
 
         if (pull > 0.02f || loading) {
-            // Фигура растёт под пальцем и доворачивается; дотянул до полного —
-            // она крутится, пока едет кадр, и им же растекается по экрану.
-            val reach = pull.coerceAtMost(1f)
-            MorphSpinner(
-                morph = morph,
-                size = if (loading) 46.dp else (26 + 22 * reach).dp,
-                color = Color.White.copy(alpha = if (loading) 0.85f else 0.35f + 0.5f * reach),
-                spinning = loading,
-                turn = reach * 140f,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 92.dp),
-            )
+            // Стандартный индикатор Material 3: круглая плашка, внутри
+            // перебираются фигуры. Под пальцем он показывает ход жеста,
+            // после — крутится сам, пока едет кадр.
+            val indicator = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 92.dp)
+            val container = Color.White.copy(alpha = 0.22f)
+            if (loading) {
+                ContainedLoadingIndicator(
+                    modifier = indicator,
+                    containerColor = container,
+                    indicatorColor = Color.White,
+                )
+            } else {
+                ContainedLoadingIndicator(
+                    progress = { pull.coerceIn(0f, 1f) },
+                    modifier = indicator,
+                    containerColor = container,
+                    indicatorColor = Color.White,
+                )
+            }
         }
 
         Row(
@@ -183,8 +191,10 @@ fun Backdrop(
         ) {
             GlassButton(onClick = onShuffle, description = stringResource(R.string.another_backdrop)) {
                 if (loading) {
-                    // Та же фигура, что и на кадре: одна пластика на весь экран.
-                    MorphSpinner(morph = morph, size = 18.dp, color = Color.White, spinning = true)
+                    LoadingIndicator(
+                        color = Color.White,
+                        modifier = Modifier.size(24.dp),
+                    )
                 } else {
                     Icon(Icons.Rounded.Refresh, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
                 }

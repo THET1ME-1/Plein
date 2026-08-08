@@ -80,7 +80,14 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.graphics.shapes)
     implementation(libs.coil.compose)
-    implementation(libs.material.kolor)
+    // material-kolor тянет мультиплатформенный org.jetbrains.compose.material3.
+    // Пакеты у него те же, что у androidx, и он перекрывает набор символов:
+    // из-за этого пропадали expressive-компоненты вроде LoadingIndicator.
+    implementation(libs.material.kolor) {
+        exclude(group = "org.jetbrains.compose.material3")
+        exclude(group = "org.jetbrains.compose.foundation")
+        exclude(group = "org.jetbrains.compose.ui")
+    }
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)

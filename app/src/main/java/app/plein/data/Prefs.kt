@@ -81,6 +81,15 @@ class Prefs(context: Context) {
     var iconPack by mutableStateOf(sp.getString(KEY_ICON_PACK, null).orEmpty())
         private set
 
+    /** open-meteo или met.no: оба без ключа и со свободной лицензией. */
+    var weatherProvider by mutableStateOf(sp.getString(KEY_WEATHER_PROVIDER, null) ?: "open-meteo")
+        private set
+
+    fun updateWeatherProvider(value: String) {
+        weatherProvider = value
+        sp.edit().putString(KEY_WEATHER_PROVIDER, value).apply()
+    }
+
     fun updateIconPack(value: String) {
         iconPack = value
         sp.edit().putString(KEY_ICON_PACK, value).apply()
@@ -179,6 +188,7 @@ class Prefs(context: Context) {
         const val KEY_CLOCK_FONT = "clock_font"
         const val KEY_UI_FONT = "ui_font"
         const val KEY_ICON_PACK = "icon_pack"
+        const val KEY_WEATHER_PROVIDER = "weather_provider"
 
         /** Амбра из Wickly: тёплая и спокойная в обеих темах. */
         const val DEFAULT_SEED = 0xFFC0863E.toInt()

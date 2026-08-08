@@ -69,6 +69,17 @@ class MainActivity : ComponentActivity() {
             var editing by remember { mutableStateOf(false) }
             var isDefault by remember { mutableStateOf(DefaultLauncher.isDefault(context)) }
             var loadingBackdrop by remember { mutableStateOf(false) }
+            var weatherLine by remember { mutableStateOf<String?>(null) }
+
+            // Погода обновляется при показе экрана и когда её включили.
+            LaunchedEffect(prefs.showWeather, prefs.weatherProvider) {
+                weatherLine = if (!prefs.showWeather) null else {
+                    val weather = app.plein.data.Weather(context)
+                    weather.current(prefs.weatherProvider)?.let { now ->
+                        "${weather.glyph(now.code)} ${now.celsius}°"
+                    }
+                }
+            }
             val scope = rememberCoroutineScope()
 
             // Роль запрашивается через результат: startActivity системный диалог
@@ -109,6 +120,7 @@ class MainActivity : ComponentActivity() {
                     repository = repository,
                     prefs = prefs,
                     backdrop = backdrop,
+                    weatherLine = weatherLine,
                     editing = editing,
                     onShuffleBackdrop = {
                         // Каждое нажатие идёт в фотобанк за новым кадром;

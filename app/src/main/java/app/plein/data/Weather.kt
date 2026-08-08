@@ -22,12 +22,18 @@ class Weather(private val context: Context) {
 
     data class Now(val celsius: Int, val code: Int)
 
-    suspend fun current(): Now? = withContext(Dispatchers.IO) {
+    suspend fun current(provider: String = "open-meteo"): Now? = withContext(Dispatchers.IO) {
         val point = lastKnownPoint() ?: return@withContext null
-        val url = URL(
-            "https://api.open-meteo.com/v1/forecast?latitude=${point.first}" +
-                "&longitude=${point.second}&current=temperature_2m,weather_code"
-        )
+        val url = when (provider) {
+            "met.no" -> URL(
+                "https://api.met.no/weatherapi/locationforecast/2.0/compact" +
+                    "?lat=${point.first}&lon=${point.second}"
+            )
+            else -> URL(
+                "https://api.open-meteo.com/v1/forecast?latitude=${point.first}" +
+                    "&longitude=${point.second}&current=temperature_2m,weather_code"
+            )
+        }
         val body = runCatching {
             (url.openConnection() as HttpURLConnection).run {
                 connectTimeout = 6000
@@ -38,11 +44,18 @@ class Weather(private val context: Context) {
         }.getOrNull() ?: return@withContext null
 
         runCatching {
-            val current = JSONObject(body).getJSONObject("current")
-            Now(
-                celsius = current.getDouble("temperature_2m").toInt(),
-                code = current.optInt("weather_code"),
-            )
+            if (provider == "met.no") {
+                val details = JSONObject(body).getJSONObject("properties")
+                    .getJSONArray("timeseries").getJSONObject(0)
+                    .getJSONObject("data").getJSONObject("instant").getJSONObject("details")
+                Now(celsius = details.getDouble("air_temperature").toInt(), code = 0)
+            } else {
+                val current = JSONObject(body).getJSONObject("current")
+                Now(
+                    celsius = current.getDouble("temperature_2m").toInt(),
+                    code = current.optInt("weather_code"),
+                )
+            }
         }.getOrNull()
     }
 

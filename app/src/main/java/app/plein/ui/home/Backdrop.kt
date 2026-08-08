@@ -65,6 +65,7 @@ fun Backdrop(
     clockSize: String,
     twentyFour: Boolean,
     showDate: Boolean,
+    weatherLine: String?,
     clockFont: String,
     onShuffle: () -> Unit,
     loading: Boolean = false,
@@ -182,8 +183,8 @@ fun Backdrop(
                 letterSpacing = (-1.2).sp,
                 color = Color.White,
             )
-            if (showDate) Text(
-                text = date,
+            if (showDate || weatherLine != null) Text(
+                text = listOfNotNull(date.takeIf { showDate }, weatherLine).joinToString(" · "),
                 fontFamily = MonoFont,
                 fontSize = 10.5.sp,
                 letterSpacing = 1.3.sp,

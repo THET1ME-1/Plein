@@ -287,6 +287,23 @@ fun SettingsScreen(
                         place = RowPlace.Middle,
                         onCheckedChange = { prefs.updateShowWeather(it) },
                     )
+                    if (prefs.showWeather) {
+                        SettingsPanel(title = stringResource(R.string.weather), place = RowPlace.Middle) {
+                            SegmentedPill(
+                                values = listOf("open-meteo", "met.no"),
+                                selected = prefs.weatherProvider,
+                                onSelect = { prefs.updateWeatherProvider(it) },
+                                content = { value, active ->
+                                    Text(
+                                        text = value,
+                                        style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp),
+                                        color = if (active) MaterialTheme.colorScheme.onPrimary
+                                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                },
+                            )
+                        }
+                    }
                     SettingsRow(
                         icon = Icons.Rounded.FormatSize,
                         title = stringResource(R.string.clock),

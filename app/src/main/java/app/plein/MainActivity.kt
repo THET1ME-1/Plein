@@ -43,13 +43,6 @@ private enum class Screen { Home, Search, Settings }
 
 class MainActivity : ComponentActivity() {
 
-    /** Нажатия «Домой», когда лаунчер уже открыт. */
-    private val homeTicks = kotlinx.coroutines.flow.MutableStateFlow(0)
-
-    override fun onNewIntent(intent: android.content.Intent) {
-        super.onNewIntent(intent)
-        homeTicks.value = homeTicks.value + 1
-    }
 
     /** Нажатие «Домой», пока лаунчер уже открыт: считаем щелчки. */
     private val homeTicks = kotlinx.coroutines.flow.MutableStateFlow(0)
@@ -126,16 +119,6 @@ class MainActivity : ComponentActivity() {
             ) { isDefault = DefaultLauncher.isDefault(context) }
 
             // Кнопка «Домой» из любого экрана возвращает на главный.
-            val homeTick by homeTicks.collectAsState()
-            LaunchedEffect(homeTick) {
-                if (homeTick > 0) {
-                    screen = Screen.Home
-                    menuFor = null
-                    editing = false
-                }
-            }
-
-            // «Домой» из настроек, поиска или меню возвращает на главный экран.
             val homeTick by homeTicks.collectAsState()
             LaunchedEffect(homeTick) {
                 if (homeTick > 0) {

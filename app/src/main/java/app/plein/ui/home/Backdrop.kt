@@ -82,7 +82,8 @@ fun Backdrop(
     LaunchedEffect(backdrop.key) {
         val decoded = withContext(Dispatchers.IO) {
             runCatching {
-                val options = android.graphics.BitmapFactory.Options().apply { inSampleSize = 2 }
+                // Полное разрешение: уменьшение вдвое давало мыло на большом кадре.
+                val options = android.graphics.BitmapFactory.Options()
                 backdrop.file?.let { BitmapFactory.decodeFile(it.path, options) }
                     ?: backdrop.asset?.let { asset ->
                         context.assets.open(asset).use { BitmapFactory.decodeStream(it, null, options) }

@@ -82,7 +82,10 @@ class BackdropSource(private val context: Context) {
 
         return (0 until results.length()).mapNotNull { index ->
             val item = results.getJSONObject(index)
+            // url это оригинал, thumbnail мелкий: берём только оригинал.
             val link = item.optString("url").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            val width = item.optInt("width")
+            if (width in 1..1000) return@mapNotNull null
             val creator = item.optString("creator").ifBlank { "Unknown" }
             val license = item.optString("license").uppercase()
             Candidate(

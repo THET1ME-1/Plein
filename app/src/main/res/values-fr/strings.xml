@@ -228,4 +228,6 @@
     <string name="row_height">Hauteur de rangée</string>
     <string name="note_hint">Notez-le</string>
     <string name="no_events">Rien aujourd\'hui</string>
+    <string name="row_auto">Auto</string>
+    <string name="row_height_hint">La cellule suit la taille des icônes</string>
 </resources>

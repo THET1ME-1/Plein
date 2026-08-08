@@ -228,4 +228,6 @@
     <string name="row_height">Altezza riga</string>
     <string name="note_hint">Scrivilo</string>
     <string name="no_events">Oggi niente</string>
+    <string name="row_auto">Auto</string>
+    <string name="row_height_hint">La cella cresce con l\'icona</string>
 </resources>

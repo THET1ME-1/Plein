@@ -228,4 +228,6 @@
     <string name="row_height">Высота ряда</string>
     <string name="note_hint">Запишите</string>
     <string name="no_events">Сегодня без событий</string>
+    <string name="row_auto">Сама</string>
+    <string name="row_height_hint">Клетка растёт вместе со значком</string>
 </resources>

@@ -130,8 +130,8 @@ class Prefs(context: Context) {
         sp.edit().putString(KEY_NOTE, value).apply()
     }
 
-    /** Высота клетки сетки: от неё зависит, сколько строк влезет в экран. */
-    var rowHeight by mutableIntStateOf(sp.getInt(KEY_ROW_HEIGHT, 96))
+    /** Высота клетки. Ноль означает «сама»: считается от размера значка. */
+    var rowHeight by mutableIntStateOf(sp.getInt(KEY_ROW_HEIGHT, 0))
         private set
 
     fun updateRowHeight(value: Int) {

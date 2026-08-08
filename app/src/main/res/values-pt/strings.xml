@@ -228,4 +228,6 @@
     <string name="row_height">Altura da linha</string>
     <string name="note_hint">Anote</string>
     <string name="no_events">Hoje sem eventos</string>
+    <string name="row_auto">Auto</string>
+    <string name="row_height_hint">A célula cresce com o ícone</string>
 </resources>

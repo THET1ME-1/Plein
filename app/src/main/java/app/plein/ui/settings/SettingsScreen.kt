@@ -290,6 +290,39 @@ fun SettingsScreen(
                             },
                         )
                         Text(
+                            text = stringResource(R.string.row_height_hint),
+                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 10.dp),
+                        )
+                    }
+                    SettingsPanel(title = stringResource(R.string.mono_icons), place = RowPlace.Middle) {
+                        SegmentedPill(
+                            values = listOf(
+                                app.plein.data.MonoMode.Off,
+                                app.plein.data.MonoMode.Declared,
+                                app.plein.data.MonoMode.Always,
+                            ),
+                            selected = prefs.monoIcons,
+                            onSelect = { prefs.updateMonoIcons(it) },
+                            content = { value, active ->
+                                Text(
+                                    text = stringResource(
+                                        when (value) {
+                                            app.plein.data.MonoMode.Declared -> R.string.mono_declared
+                                            app.plein.data.MonoMode.Always -> R.string.mono_always
+                                            else -> R.string.mono_off
+                                        }
+                                    ),
+                                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp),
+                                    color = if (active) MaterialTheme.colorScheme.onPrimary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            },
+                        )
+                        Text(
                             text = stringResource(R.string.mono_hint),
                             style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -298,12 +331,13 @@ fun SettingsScreen(
                     }
                     SettingsPanel(title = stringResource(R.string.row_height), place = RowPlace.Middle) {
                         SegmentedPill(
-                            values = listOf(84, 96, 110, 124),
+                            values = listOf(0, 96, 110, 124),
                             selected = prefs.rowHeight,
                             onSelect = { prefs.updateRowHeight(it) },
                             content = { value, active ->
                                 Text(
-                                    text = value.toString(),
+                                    text = if (value == 0) stringResource(R.string.row_auto)
+                                    else value.toString(),
                                     style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp),
                                     color = if (active) MaterialTheme.colorScheme.onPrimary
                                     else MaterialTheme.colorScheme.onSurfaceVariant,

@@ -228,4 +228,6 @@
     <string name="row_height">Row height</string>
     <string name="note_hint">Write it down</string>
     <string name="no_events">No events today</string>
+    <string name="row_auto">Auto</string>
+    <string name="row_height_hint">Cells grow with the icons</string>
 </resources>

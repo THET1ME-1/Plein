@@ -228,4 +228,6 @@
     <string name="row_height">Висота ряду</string>
     <string name="note_hint">Запишіть</string>
     <string name="no_events">Сьогодні без подій</string>
+    <string name="row_auto">Сама</string>
+    <string name="row_height_hint">Клітинка росте разом зі значком</string>
 </resources>

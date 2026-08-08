@@ -228,4 +228,6 @@
     <string name="row_height">Alto de fila</string>
     <string name="note_hint">Apúntalo</string>
     <string name="no_events">Hoy sin eventos</string>
+    <string name="row_auto">Auto</string>
+    <string name="row_height_hint">La celda crece con el icono</string>
 </resources>

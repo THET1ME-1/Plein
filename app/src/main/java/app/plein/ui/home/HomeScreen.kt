@@ -425,7 +425,11 @@ fun HomeScreen(
                                 tiles = tiles,
                                 repository = repository,
                                 columns = columns,
-                                rowHeight = prefs.rowHeight.dp,
+                                rowHeight = CellMetrics.resolve(
+                                    custom = prefs.rowHeight,
+                                    columns = columns,
+                                    showLabels = prefs.showLabels,
+                                ),
                                 iconSize = iconSize,
                                 iconShape = iconShape,
                                 iconPack = iconPack,

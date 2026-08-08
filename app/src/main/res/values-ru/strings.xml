@@ -117,4 +117,9 @@
     <string name="backup_saved">Копия записана</string>
     <string name="backup_restored">Копия восстановлена</string>
     <string name="backup_failed">Файл не подошёл</string>
+    <string name="mono_icons">Значки одним тоном</string>
+    <string name="mono_off">Выкл</string>
+    <string name="mono_declared">Где есть</string>
+    <string name="mono_always">Всегда</string>
+    <string name="mono_hint">Значки берут цвет темы</string>
 </resources>

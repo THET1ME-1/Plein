@@ -117,4 +117,9 @@
     <string name="backup_saved">Sicherung gespeichert</string>
     <string name="backup_restored">Sicherung eingespielt</string>
     <string name="backup_failed">Datei passt nicht</string>
+    <string name="mono_icons">Einfarbige Symbole</string>
+    <string name="mono_off">Aus</string>
+    <string name="mono_declared">Wo vorhanden</string>
+    <string name="mono_always">Immer</string>
+    <string name="mono_hint">Symbole nehmen die Themenfarbe</string>
 </resources>

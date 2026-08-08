@@ -94,6 +94,15 @@ class Prefs(context: Context) {
     var weatherApp by mutableStateOf(sp.getString(KEY_WEATHER_APP, null).orEmpty())
         private set
 
+    /** Значки одним тоном: Off, Declared или Always. */
+    var monoIcons by mutableStateOf(MonoMode.of(sp.getString(KEY_MONO, null)))
+        private set
+
+    fun updateMonoIcons(value: MonoMode) {
+        monoIcons = value
+        sp.edit().putString(KEY_MONO, value.name).apply()
+    }
+
     /** dots, bar, numbers или none. */
     var pageIndicator by mutableStateOf(sp.getString(KEY_PAGE_INDICATOR, null) ?: "dots")
         private set
@@ -252,6 +261,7 @@ class Prefs(context: Context) {
         const val KEY_WEATHER_APP = "weather_app"
         const val KEY_LANGUAGE = "language"
         const val KEY_PAGE_INDICATOR = "page_indicator"
+        const val KEY_MONO = "mono_icons"
         const val KEY_BACKDROP_FILE = "backdrop_file"
         const val KEY_BACKDROP_AUTHOR = "backdrop_author"
         const val KEY_BACKDROP_CREDIT = "backdrop_credit"

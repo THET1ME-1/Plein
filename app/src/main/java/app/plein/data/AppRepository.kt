@@ -129,11 +129,27 @@ class AppRepository(private val context: Context) {
     }
 
     /** Готовый значок из памяти: без корутины, чтобы прокрутка не ждала диспетчер. */
-    fun cachedIcon(entry: AppEntry, sizePx: Int, shapeKey: String, iconPack: String = ""): ImageBitmap? =
-        iconCache.get(cacheKeyOf(entry, sizePx, shapeKey) + "@" + iconPack)
+    fun cachedIcon(
+        entry: AppEntry,
+        sizePx: Int,
+        shapeKey: String,
+        iconPack: String = "",
+        mono: MonoStyle? = null,
+    ): ImageBitmap? = iconCache.get(cacheKeyOf(entry, sizePx, shapeKey, iconPack, mono))
 
-    private fun cacheKeyOf(entry: AppEntry, sizePx: Int, shapeKey: String) =
-        "${entry.key}@$sizePx@$shapeKey"
+    /**
+     * Ключ значка.
+     *
+     * Режим и цвет монохрома входят в ключ обязательно: без них смена темы
+     * оставляла на экране картинки, покрашенные старым цветом.
+     */
+    private fun cacheKeyOf(
+        entry: AppEntry,
+        sizePx: Int,
+        shapeKey: String,
+        iconPack: String,
+        mono: MonoStyle?,
+    ) = "${entry.key}@$sizePx@$shapeKey@$iconPack@${mono?.key ?: "color"}"
 
     private val iconPacks = IconPacks(context)
 
@@ -145,8 +161,9 @@ class AppRepository(private val context: Context) {
         shapeKey: String,
         shapePath: android.graphics.Path?,
         iconPack: String = "",
+        mono: MonoStyle? = null,
     ): ImageBitmap? = withContext(Dispatchers.IO) {
-        val cacheKey = cacheKeyOf(entry, sizePx, shapeKey) + "@" + iconPack
+        val cacheKey = cacheKeyOf(entry, sizePx, shapeKey, iconPack, mono)
         iconCache.get(cacheKey)?.let { return@withContext it }
 
         val packageName = entry.component.packageName
@@ -163,7 +180,8 @@ class AppRepository(private val context: Context) {
             info?.getIcon(context.resources.displayMetrics.densityDpi)
         }.getOrNull() ?: return@withContext null
 
-        val rendered = renderIcon(drawable, sizePx, shapePath)
+        val rendered = mono?.let { renderMono(drawable, sizePx, shapePath, it) }
+            ?: renderIcon(drawable, sizePx, shapePath)
         diskCache.write(packageName, cacheKey, rendered)
         val bitmap = rendered.asImageBitmap()
         iconCache.put(cacheKey, bitmap)
@@ -199,6 +217,47 @@ class AppRepository(private val context: Context) {
         return output
     }
 
+    /**
+     * Значок одним тоном.
+     *
+     * Сперва спрашиваем у системы монослой. Его нет — в режиме «всегда»
+     * считаем силуэт из цветной картинки, в режиме «где есть» отдаём цветной
+     * значок как был.
+     */
+    private fun renderMono(
+        drawable: Drawable,
+        sizePx: Int,
+        shapePath: android.graphics.Path?,
+        style: MonoStyle,
+    ): Bitmap {
+        val layer = MonoIcons.layerOf(drawable)
+        val mask = when {
+            layer != null -> drawLayer(layer, sizePx)
+            style.mode == MonoMode.Always -> MonoIcons.silhouette(renderIcon(drawable, sizePx, null))
+            else -> return renderIcon(drawable, sizePx, shapePath)
+        }
+
+        val painted = MonoIcons.paint(mask, sizePx, style.tint, style.background)
+        if (shapePath == null) return painted
+        val output = createBitmap(sizePx, sizePx)
+        Canvas(output).apply {
+            clipPath(shapePath)
+            drawBitmap(painted, 0f, 0f, null)
+        }
+        return output
+    }
+
+    /** Монослой живёт в той же сетке 108 к 72, поэтому кроп тот же. */
+    private fun drawLayer(layer: Drawable, sizePx: Int): Bitmap {
+        val output = createBitmap(sizePx, sizePx)
+        val canvas = Canvas(output)
+        val full = (sizePx * 1.5f).toInt()
+        val offset = ((full - sizePx) / 2f).toInt()
+        layer.setBounds(-offset, -offset, full - offset, full - offset)
+        layer.draw(canvas)
+        return output
+    }
+
     /** Своё имя приложения на экране. Пустая строка возвращает системное. */
     fun setCustomLabel(key: String, label: String) {
         val trimmed = label.trim()
@@ -221,13 +280,14 @@ class AppRepository(private val context: Context) {
         shapeKey: String,
         shapePath: android.graphics.Path?,
         iconPack: String = "",
+        mono: MonoStyle? = null,
     ) = withContext(Dispatchers.IO) {
         val entries = _apps.value
         val gate = Semaphore(4)
         coroutineScope {
             entries.map { entry ->
                 async {
-                    gate.withPermit { icon(entry, sizePx, shapeKey, shapePath, iconPack) }
+                    gate.withPermit { icon(entry, sizePx, shapeKey, shapePath, iconPack, mono) }
                 }
             }.awaitAll()
         }

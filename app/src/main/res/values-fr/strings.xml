@@ -117,4 +117,9 @@
     <string name="backup_saved">Sauvegarde écrite</string>
     <string name="backup_restored">Sauvegarde restaurée</string>
     <string name="backup_failed">Ce fichier ne convient pas</string>
+    <string name="mono_icons">Icônes monochromes</string>
+    <string name="mono_off">Off</string>
+    <string name="mono_declared">Si fournies</string>
+    <string name="mono_always">Toujours</string>
+    <string name="mono_hint">Les icônes prennent la couleur du thème</string>
 </resources>

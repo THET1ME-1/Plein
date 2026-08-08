@@ -5,6 +5,7 @@ plugins {
     // AGP 9 поднимает Kotlin сам, отдельный kotlin-android больше не нужен.
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.roborazzi)
 }
 
 // Ключ и пароли живут вне репозитория: ~/keys/plein.properties
@@ -38,6 +39,17 @@ android {
         }
     }
 
+    // Сплит по ABI: телефон качает свой кусок, а не всё сразу.
+    // Смещение versionCode обязательно, иначе обновлятор путает сборки.
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("armeabi-v7a", "arm64-v8a", "x86_64")
+            isUniversalApk = true
+        }
+    }
+
     buildTypes {
         release {
             signingConfig = if (keystoreProps.getProperty("storeFile") != null) {
@@ -62,6 +74,26 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            isReturnDefaultValues = true
+        }
+    }
+}
+
+// Каждой ABI свой versionCode: телефон обязан видеть обновление своей сборки.
+val abiCodes = mapOf("armeabi-v7a" to 1, "x86_64" to 2, "arm64-v8a" to 3)
+androidComponents {
+    onVariants { variant ->
+        variant.outputs.forEach { output ->
+            val abi = output.filters.find { it.filterType.name == "ABI" }?.identifier
+            val offset = abiCodes[abi] ?: 0
+            val base = output.versionCode.orNull ?: 1
+            output.versionCode.set(base * 10 + offset)
+        }
     }
 }
 
@@ -98,7 +130,17 @@ dependencies {
     implementation(libs.androidx.material.icons.extended)
     debugImplementation(libs.androidx.ui.tooling)
 
+    // Снимки экрана считаются на JVM: эмулятор для проверки не нужен.
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(libs.roborazzi.rule)
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.ui.test.junit4)
+    testImplementation(libs.androidx.junit)
+    debugImplementation(libs.androidx.ui.test.manifest)
+
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
 }

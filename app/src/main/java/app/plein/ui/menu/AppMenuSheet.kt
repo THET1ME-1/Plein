@@ -3,6 +3,8 @@ package app.plein.ui.menu
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -41,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -92,8 +96,10 @@ fun AppMenuSheet(
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
     ) {
-        Column(Modifier.navigationBarsPadding().padding(bottom = 16.dp)) {
+        Column(Modifier.navigationBarsPadding()) {
 
+            // Шапка стоит, едет только список: пять быстрых действий, разделы и
+            // папки в экран не влезали, и до папок нельзя было добраться вовсе.
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 14.dp),
@@ -115,6 +121,12 @@ fun AppMenuSheet(
                 }
             }
 
+            Column(
+                modifier = Modifier
+                    .heightIn(max = (LocalConfiguration.current.screenHeightDp * 0.6f).dp)
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = 16.dp)
+            ) {
             if (renaming) {
                 PlainField(
                     value = draft,
@@ -198,12 +210,13 @@ fun AppMenuSheet(
                     )
                 }
             }
+            }
         }
     }
 }
 
 @Composable
-private fun SectionLabel(text: String) {
+internal fun SectionLabel(text: String) {
     Text(
         text = text.uppercase(),
         fontFamily = MonoFont,
@@ -216,7 +229,7 @@ private fun SectionLabel(text: String) {
 
 /** Строка с системным значком: почти все пункты меню такие. */
 @Composable
-private fun MenuRow(
+internal fun MenuRow(
     icon: ImageVector,
     title: String,
     subtitle: String? = null,
@@ -296,3 +309,15 @@ private fun MenuRow(
         }
     }
 }
+
+/** Обёртки для снимков экрана: тест собирает лист из тех же кирпичей. */
+@Composable
+fun MenuPreviewSection(text: String) = SectionLabel(text)
+
+@Composable
+fun MenuPreviewRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String? = null,
+    danger: Boolean = false,
+) = MenuRow(icon = icon, title = title, subtitle = subtitle, danger = danger, onClick = {})

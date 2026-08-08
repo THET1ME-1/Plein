@@ -15,11 +15,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import app.plein.data.AppEntry
 import app.plein.data.AppRepository
+import app.plein.data.MonoMode
+import app.plein.data.MonoStyle
 import app.plein.ui.icons.IconShape
 
 /**
@@ -33,19 +36,28 @@ fun AppIcon(
     size: Dp,
     iconShape: IconShape,
     iconPack: String = "",
+    monoMode: MonoMode = MonoMode.Off,
     modifier: Modifier = Modifier,
 ) {
     val px = with(LocalDensity.current) { size.roundToPx() }
     val shapeKey = iconShape.name
+    // Цвета монохрома берутся из темы прямо здесь: они входят в ключ кэша,
+    // поэтому смена палитры сама тянет за собой перерисовку значков.
+    val scheme = MaterialTheme.colorScheme
+    val mono = if (monoMode == MonoMode.Off) null else MonoStyle(
+        mode = monoMode,
+        tint = scheme.onSurface.toArgb(),
+        background = scheme.surfaceContainerHighest.toArgb(),
+    )
 
     // Готовый значок берём из памяти сразу: корутина на каждую ячейку роняла
     // быструю прокрутку. Форма уже вжжена в битмап, клипа на экране нет.
-    val cached = repository.cachedIcon(entry, px, shapeKey, iconPack)
-    var bitmap by remember(entry.key, px, shapeKey, iconPack) { mutableStateOf(cached) }
+    val cached = repository.cachedIcon(entry, px, shapeKey, iconPack, mono)
+    var bitmap by remember(entry.key, px, shapeKey, iconPack, mono) { mutableStateOf(cached) }
 
-    LaunchedEffect(entry.key, px, shapeKey, iconPack) {
+    LaunchedEffect(entry.key, px, shapeKey, iconPack, mono) {
         if (bitmap == null) {
-            bitmap = repository.icon(entry, px, shapeKey, iconShape.path(px), iconPack)
+            bitmap = repository.icon(entry, px, shapeKey, iconShape.path(px), iconPack, mono)
         }
     }
 

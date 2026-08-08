@@ -44,6 +44,7 @@ import app.plein.ui.theme.entering
 import app.plein.ui.theme.exiting
 import app.plein.ui.theme.isDark
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 
 /** Экраны лаунчера. Один активен за раз, домашний всегда под ними. */
 private enum class Screen { Home, Search, Settings }
@@ -196,16 +197,7 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(Unit) { repository.refresh() }
             LaunchedEffect(apps) { folderStore.seedIfEmpty(apps) }
 
-            // Значки грузим все разом: ленивая подгрузка дёргала кадры на скролле.
             val density = LocalDensity.current
-            LaunchedEffect(apps, prefs.columns, prefs.iconPack, prefs.iconShape) {
-                if (apps.isEmpty()) return@LaunchedEffect
-                // Ждём первый кадр: иначе прогрев конкурирует с отрисовкой экрана.
-                withFrameNanos { }
-                delay(250)
-                val sizePx = with(density) { iconSizeFor(prefs.columns).roundToPx() }
-                repository.preloadIcons(sizePx, prefs.iconShape.name, prefs.iconShape.path(sizePx), prefs.iconPack)
-            }
             // Тему сменили — кадр меняем, только если он ей больше не годится.
             // Безусловная замена стирала скачанный кадр на первом же кадре
             // композиции, ещё до того, как человек что-то трогал.
@@ -224,6 +216,33 @@ class MainActivity : ComponentActivity() {
                 vibrancy = prefs.vibrancy,
                 interfaceFont = prefs.interfaceFont,
             ) {
+                // Значки грузим все разом: ленивая подгрузка дёргала кадры на
+                // скролле. Прогрев стоит внутри темы: цвета монохрома обязаны
+                // совпасть с теми, что возьмёт значок, иначе кэш наполнится
+                // картинками, которых никто не спросит.
+                val scheme = androidx.compose.material3.MaterialTheme.colorScheme
+                val monoStyle = if (prefs.monoIcons == app.plein.data.MonoMode.Off) null else {
+                    app.plein.data.MonoStyle(
+                        mode = prefs.monoIcons,
+                        tint = scheme.onSurface.toArgb(),
+                        background = scheme.surfaceContainerHighest.toArgb(),
+                    )
+                }
+                LaunchedEffect(apps, prefs.columns, prefs.iconPack, prefs.iconShape, monoStyle) {
+                    if (apps.isEmpty()) return@LaunchedEffect
+                    // Ждём первый кадр: иначе прогрев спорит с отрисовкой экрана.
+                    withFrameNanos { }
+                    delay(250)
+                    val sizePx = with(density) { iconSizeFor(prefs.columns).roundToPx() }
+                    repository.preloadIcons(
+                        sizePx = sizePx,
+                        shapeKey = prefs.iconShape.name,
+                        shapePath = prefs.iconShape.path(sizePx),
+                        iconPack = prefs.iconPack,
+                        mono = monoStyle,
+                    )
+                }
+
                 HomeScreen(
                     folders = folderStore.folders,
                     apps = apps,

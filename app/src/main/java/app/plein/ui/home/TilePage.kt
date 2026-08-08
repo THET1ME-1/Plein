@@ -124,13 +124,23 @@ fun TilePage(
         // Шаг перетаскивания меряем той же линейкой, что рисует сетку. Пока
         // ширина бралась из `LocalConfiguration`, любой отступ страницы уводил
         // плитку мимо клетки — считалось по экрану, рисовалось по контейнеру.
-        val cellWidthPx = with(density) { ((maxWidth - 40.dp) / columns).toPx() }
+        val cellWidthDp = (maxWidth - 40.dp) / columns
+        val cellWidthPx = with(density) { cellWidthDp.toPx() }
+        // Плитка становится вровень со значками: по бокам столько же воздуха,
+        // сколько у иконки в её клетке, снизу — место, где у иконки подпись.
+        val sideInset = ((cellWidthDp - iconSize) / 2).coerceAtLeast(2.dp)
+        val bottomInset = (rowHeight - iconSize).coerceAtLeast(0.dp)
 
         CellGrid(
             placements = placements,
             columns = columns,
             rowHeight = rowHeight,
             highlight = previewCell,
+            highlightInsets = androidx.compose.foundation.layout.PaddingValues(
+                start = sideInset,
+                end = sideInset,
+                bottom = bottomInset,
+            ),
             modifier = Modifier.fillMaxWidth(),
         ) { placement ->
             when (val item = placement.item) {
@@ -290,14 +300,24 @@ fun TilePage(
                                 scaleY = lift
                             }
                     ) {
-                        when (item) {
-                            is CellItem.Tile -> tileContent(item.kind)
-                            is CellItem.Widget -> widgetContent(
-                                item.widgetId,
-                                placement.cell.width,
-                                placement.cell.height,
-                            )
-                            else -> Unit
+                        Box(
+                            Modifier
+                                .fillMaxSize()
+                                .padding(
+                                    start = sideInset,
+                                    end = sideInset,
+                                    bottom = bottomInset,
+                                )
+                        ) {
+                            when (item) {
+                                is CellItem.Tile -> tileContent(item.kind)
+                                is CellItem.Widget -> widgetContent(
+                                    item.widgetId,
+                                    placement.cell.width,
+                                    placement.cell.height,
+                                )
+                                else -> Unit
+                            }
                         }
 
                         // Слой жестов поверх содержимого.

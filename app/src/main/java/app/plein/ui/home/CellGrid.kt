@@ -40,6 +40,8 @@ fun CellGrid(
     rowHeight: Dp,
     horizontalPadding: Dp = 20.dp,
     highlight: Cell? = null,
+    highlightInsets: androidx.compose.foundation.layout.PaddingValues =
+        androidx.compose.foundation.layout.PaddingValues(4.dp),
     modifier: Modifier = Modifier,
     content: @Composable (Placement) -> Unit,
 ) {
@@ -62,7 +64,7 @@ fun CellGrid(
                         y = rowHeight * cell.row,
                     )
                     .size(cellWidth * cell.width, rowHeight * cell.height)
-                    .padding(4.dp)
+                    .padding(highlightInsets)
                     .clip(RoundedCornerShape(26.dp))
                     .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f))
             )

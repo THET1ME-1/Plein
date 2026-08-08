@@ -44,7 +44,6 @@ fun WidgetView(
         Box(
             Modifier
                 .fillMaxSize()
-                .padding(4.dp)
                 .clip(RoundedCornerShape(26.dp))
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh),
             contentAlignment = Alignment.Center,
@@ -65,7 +64,6 @@ fun WidgetView(
     Box(
         Modifier
             .fillMaxSize()
-            .padding(4.dp)
             .clip(RoundedCornerShape(26.dp))
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
     ) {

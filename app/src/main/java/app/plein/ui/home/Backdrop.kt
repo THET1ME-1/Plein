@@ -1,6 +1,8 @@
 package app.plein.ui.home
 
 import android.graphics.BitmapFactory
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -37,10 +39,13 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.plein.R
 import app.plein.data.Backdrop
 import app.plein.data.PhotoPalette
+import app.plein.ui.theme.EmphasizedDecelerate
 import app.plein.ui.theme.MonoFont
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -64,6 +69,10 @@ fun Backdrop(
     val context = LocalContext.current
     var photo by remember(backdrop.asset) { mutableStateOf<ImageBitmap?>(null) }
 
+    // Каждая смена кадра рисует свою фигуру и растекается ею в прямоугольник.
+    val morph = remember(backdrop.asset) { MorphReveal.randomMorph() }
+    val reveal = remember(backdrop.asset) { Animatable(0f) }
+
     LaunchedEffect(backdrop.asset) {
         val decoded = withContext(Dispatchers.IO) {
             runCatching {
@@ -74,6 +83,7 @@ fun Backdrop(
         photo = decoded.asImageBitmap()
         val seed = withContext(Dispatchers.Default) { PhotoPalette.seedFrom(decoded) }
         onSeedExtracted(seed)
+        reveal.animateTo(1f, tween(650, easing = EmphasizedDecelerate))
     }
 
     val time = remember { SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date()) }
@@ -96,7 +106,9 @@ fun Backdrop(
                 bitmap = it,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(MorphShape(morph, reveal.value)),
             )
         }
 
@@ -118,10 +130,10 @@ fun Backdrop(
                 .align(Alignment.TopEnd)
                 .padding(top = 46.dp, end = 12.dp),
         ) {
-            GlassButton(onClick = onShuffle, description = "Другой кадр") {
+            GlassButton(onClick = onShuffle, description = stringResource(R.string.another_backdrop)) {
                 Icon(Icons.Rounded.Refresh, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
             }
-            GlassButton(onClick = onOpenSettings, description = "Настройки") {
+            GlassButton(onClick = onOpenSettings, description = stringResource(R.string.settings)) {
                 Icon(Icons.Rounded.Tune, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
             }
         }
@@ -151,7 +163,7 @@ fun Backdrop(
         }
 
         Text(
-            text = "Фото: ${backdrop.author} · Unsplash",
+            text = stringResource(R.string.photo_credit, backdrop.author),
             fontFamily = MonoFont,
             fontSize = 9.5.sp,
             letterSpacing = 0.4.sp,

@@ -3,7 +3,9 @@ package app.plein.ui.search
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,8 +50,10 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.plein.R
 import app.plein.data.AppEntry
 import app.plein.search.Calculator
 import app.plein.data.AppRepository
@@ -60,11 +64,13 @@ import app.plein.ui.theme.MonoFont
  * Поиск по телефону: приложения, счёт выражений и запросы наружу.
  * Ищет по всему, а не по текущей папке, поэтому и живёт отдельным экраном.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SearchScreen(
     apps: List<AppEntry>,
     repository: AppRepository,
     iconShape: Shape,
+    onAppMenu: (AppEntry) -> Unit,
     onClose: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -126,16 +132,19 @@ fun SearchScreen(
                 }
 
                 if (matches.isNotEmpty()) {
-                    item { SectionLabel("Приложения") }
+                    item { SectionLabel(stringResource(R.string.search_section_apps)) }
                     items(matches, key = { it.key }) { entry ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable {
-                                    repository.launch(entry)
-                                    onClose()
-                                }
+                                .combinedClickable(
+                                    onClick = {
+                                        repository.launch(entry)
+                                        onClose()
+                                    },
+                                    onLongClick = { onAppMenu(entry) },
+                                )
                                 .padding(horizontal = 20.dp, vertical = 8.dp),
                         ) {
                             AppIcon(entry = entry, repository = repository, size = 44.dp, shape = iconShape)
@@ -161,7 +170,7 @@ fun SearchScreen(
                 }
 
                 if (query.isNotBlank()) {
-                    item { SectionLabel("Наружу") }
+                    item { SectionLabel(stringResource(R.string.search_section_outside)) }
                     item {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -180,7 +189,7 @@ fun SearchScreen(
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Text(
-                                text = "Искать «$query» в интернете",
+                                text = stringResource(R.string.search_web, query),
                                 style = MaterialTheme.typography.bodyLarge.copy(fontSize = 14.5.sp),
                                 color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.padding(start = 14.dp),
@@ -216,7 +225,7 @@ fun SearchScreen(
                     ) {
                         if (query.isEmpty()) {
                             Text(
-                                text = "Приложения, контакты, счёт",
+                                text = stringResource(R.string.search_placeholder),
                                 fontSize = 15.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -244,7 +253,7 @@ fun SearchScreen(
                     ) {
                         Icon(
                             Icons.Rounded.Close,
-                            contentDescription = "Закрыть",
+                            contentDescription = stringResource(R.string.close),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp),
                         )

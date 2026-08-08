@@ -3,6 +3,8 @@ package app.plein
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -25,6 +27,8 @@ import app.plein.ui.search.SearchScreen
 import app.plein.ui.settings.SettingsScreen
 import app.plein.ui.theme.DefaultSeed
 import app.plein.ui.theme.PleinTheme
+import app.plein.ui.theme.isDark
+import androidx.compose.ui.graphics.Color
 
 /** Экраны лаунчера. Один активен за раз, домашний всегда под ними. */
 private enum class Screen { Home, Search, Settings }
@@ -47,7 +51,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val context = LocalContext.current
             val apps by repository.apps.collectAsState()
-            val dark = if (prefs.followSystemTheme) isSystemInDarkTheme() else prefs.darkTheme
+            val dark = prefs.themeMode.isDark(isSystemInDarkTheme())
 
             var seed by remember { mutableStateOf(DefaultSeed) }
             var backdrop by remember { mutableStateOf(Backdrops.firstFor(dark)) }
@@ -56,11 +60,26 @@ class MainActivity : ComponentActivity() {
             var editing by remember { mutableStateOf(false) }
             var isDefault by remember { mutableStateOf(DefaultLauncher.isDefault(context)) }
 
+            // Роль запрашивается через результат: startActivity системный диалог
+            // показывает не всегда, а вернуться надо с обновлённым состоянием.
+            val roleLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.StartActivityForResult()
+            ) { isDefault = DefaultLauncher.isDefault(context) }
+
             LaunchedEffect(Unit) { repository.refresh() }
             LaunchedEffect(apps) { folderStore.seedIfEmpty(apps) }
             LaunchedEffect(dark) { backdrop = Backdrops.firstFor(dark) }
 
-            PleinTheme(dark = dark, seed = seed) {
+            // Цвет из кадра перебивает свой seed, пока это не выключено в настройках.
+            val activeSeed = if (prefs.seedFromPhoto) seed else Color(prefs.seedColor)
+
+            PleinTheme(
+                dark = dark,
+                seed = activeSeed,
+                dynamicColor = prefs.dynamicColor,
+                amoled = prefs.amoled,
+                vibrancy = prefs.vibrancy,
+            ) {
                 HomeScreen(
                     folders = folderStore.folders,
                     apps = apps,
@@ -87,6 +106,7 @@ class MainActivity : ComponentActivity() {
                         apps = apps,
                         repository = repository,
                         iconShape = prefs.iconShape.shape(),
+                        onAppMenu = { menuFor = it },
                         onClose = { screen = Screen.Home },
                     )
 
@@ -94,10 +114,9 @@ class MainActivity : ComponentActivity() {
                         prefs = prefs,
                         folders = folderStore.folders,
                         isDefaultLauncher = isDefault,
+                        dark = dark,
                         onClose = { screen = Screen.Home },
-                        onMakeDefault = {
-                            runCatching { startActivity(DefaultLauncher.requestIntent(context)) }
-                        },
+                        onMakeDefault = { roleLauncher.launch(DefaultLauncher.requestIntent(context)) },
                         onCreateFolder = { folderStore.create(it) },
                         onRenameFolder = { id, title -> folderStore.rename(id, title) },
                         onDeleteFolder = { folderStore.delete(it) },

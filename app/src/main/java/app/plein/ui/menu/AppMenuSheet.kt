@@ -43,8 +43,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.plein.R
 import app.plein.data.AppEntry
 import app.plein.data.AppRepository
 import app.plein.data.FolderConfig
@@ -105,7 +107,7 @@ fun AppMenuSheet(
                 OutlinedTextField(
                     value = draft,
                     onValueChange = { draft = it },
-                    label = { Text("Имя приложения") },
+                    label = { Text(stringResource(R.string.app_custom_name)) },
                     singleLine = true,
                     shape = RoundedCornerShape(18.dp),
                     modifier = Modifier
@@ -118,27 +120,27 @@ fun AppMenuSheet(
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp, vertical = 4.dp),
                 ) {
-                    TextButton(onClick = { renaming = false; draft = entry.title }) { Text("Отмена") }
-                    TextButton(onClick = { onRename(draft); renaming = false }) { Text("Сохранить") }
+                    TextButton(onClick = { renaming = false; draft = entry.title }) { Text(stringResource(R.string.cancel)) }
+                    TextButton(onClick = { onRename(draft); renaming = false }) { Text(stringResource(R.string.save)) }
                 }
             } else {
-                SectionLabel("Приложение")
-                MenuRow(Icons.Rounded.SwapHoriz, "Переставить", "Перенести значок в сетке", onClick = onStartReorder)
-                MenuRow(Icons.Rounded.DriveFileRenameOutline, "Имя", "Своё название на экране", onClick = { renaming = true })
-                MenuRow(Icons.Rounded.Info, "О приложении", "Разрешения, память, батарея", onClick = {
+                SectionLabel(stringResource(R.string.app_section))
+                MenuRow(Icons.Rounded.SwapHoriz, stringResource(R.string.reorder), stringResource(R.string.reorder_hint), onClick = onStartReorder)
+                MenuRow(Icons.Rounded.DriveFileRenameOutline, stringResource(R.string.app_custom_name), stringResource(R.string.app_custom_name_hint), onClick = { renaming = true })
+                MenuRow(Icons.Rounded.Info, stringResource(R.string.app_info), stringResource(R.string.app_info_hint), onClick = {
                     repository.openAppInfo(entry)
                     onDismiss()
                 })
             }
 
             if (folders.any { !it.isAll }) {
-                SectionLabel("Папки")
+                SectionLabel(stringResource(R.string.folders))
                 folders.filter { !it.isAll }.forEach { folder ->
                     val inside = folder.id in memberOf
                     MenuRow(
                         icon = if (inside) Icons.Rounded.Check else Icons.Rounded.FolderOpen,
                         title = folder.title,
-                        subtitle = if (inside) "В папке" else "Добавить",
+                        subtitle = if (inside) stringResource(R.string.in_folder) else stringResource(R.string.add_to_folder),
                         highlighted = inside,
                         onClick = { onToggleFolder(folder.id) },
                     )

@@ -52,6 +52,8 @@ import androidx.compose.ui.unit.sp
 import app.plein.data.FolderConfig
 import app.plein.data.Prefs
 import app.plein.ui.icons.IconShape
+import androidx.compose.ui.res.stringResource
+import app.plein.R
 import app.plein.ui.theme.MonoFont
 
 /**
@@ -63,6 +65,7 @@ fun SettingsScreen(
     prefs: Prefs,
     folders: List<FolderConfig>,
     isDefaultLauncher: Boolean,
+    dark: Boolean,
     onClose: () -> Unit,
     onMakeDefault: () -> Unit,
     onCreateFolder: (String) -> Unit,
@@ -74,6 +77,7 @@ fun SettingsScreen(
     var creating by remember { mutableStateOf(false) }
     var renamingId by remember { mutableStateOf<String?>(null) }
     var draft by remember { mutableStateOf("") }
+    var picking by remember { mutableStateOf(false) }
 
     Box(
         Modifier
@@ -101,12 +105,12 @@ fun SettingsScreen(
                     ) {
                         Icon(
                             Icons.Rounded.ArrowBack,
-                            contentDescription = "Назад",
+                            contentDescription = stringResource(R.string.back),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     Text(
-                        text = "Настройки",
+                        text = stringResource(R.string.settings),
                         style = MaterialTheme.typography.headlineSmall.copy(fontSize = 26.sp),
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(start = 4.dp),
@@ -136,12 +140,12 @@ fun SettingsScreen(
                             )
                             Column(Modifier.padding(start = 14.dp)) {
                                 Text(
-                                    text = "Сделать лаунчером по умолчанию",
+                                    text = stringResource(R.string.make_default),
                                     style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp),
                                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                                 )
                                 Text(
-                                    text = "Кнопка «Домой» будет открывать Plein",
+                                    text = stringResource(R.string.make_default_hint),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f),
                                 )
@@ -151,7 +155,7 @@ fun SettingsScreen(
                 }
             }
 
-            item { SectionLabel("Форма значков") }
+            item { SectionLabel(stringResource(R.string.icon_shape)) }
             item {
                 val shapes = if (allShapes) IconShape.entries.toList() else IconShape.featured
                 Column {
@@ -181,9 +185,9 @@ fun SettingsScreen(
                 }
             }
 
-            item { SectionLabel("Сетка") }
+            item { SectionLabel(stringResource(R.string.grid)) }
             item {
-                SettingRow(title = "Столбцы", subtitle = "Сколько значков в ряд") {
+                SettingRow(title = stringResource(R.string.columns), subtitle = stringResource(R.string.columns_hint)) {
                     Segments(
                         values = listOf(3, 4, 5, 6),
                         selected = prefs.columns,
@@ -193,33 +197,32 @@ fun SettingsScreen(
                 }
             }
             item {
-                SettingRow(title = "Названия приложений", subtitle = "Подписи под значками") {
-                    Switch(
-                        checked = prefs.showLabels,
-                        onCheckedChange = { prefs.updateShowLabels(it) },
-                    )
-                }
-            }
-            item {
-                SettingRow(title = "Тема телефона", subtitle = "Следовать системе") {
-                    Switch(
-                        checked = prefs.followSystemTheme,
-                        onCheckedChange = { prefs.updateFollowSystemTheme(it) },
-                    )
-                }
-            }
-            if (!prefs.followSystemTheme) {
-                item {
-                    SettingRow(title = "Тёмная тема", subtitle = "Постоянно") {
-                        Switch(
-                            checked = prefs.darkTheme,
-                            onCheckedChange = { prefs.updateDarkTheme(it) },
-                        )
-                    }
+                SettingRow(title = stringResource(R.string.labels), subtitle = stringResource(R.string.labels_hint)) {
+                    Switch(checked = prefs.showLabels, onCheckedChange = { prefs.updateShowLabels(it) })
                 }
             }
 
-            item { SectionLabel("Папки") }
+            item { SectionLabel(stringResource(R.string.appearance)) }
+            item {
+                AppearanceSection(
+                    themeMode = prefs.themeMode,
+                    amoled = prefs.amoled,
+                    dynamicColor = prefs.dynamicColor,
+                    vibrancy = prefs.vibrancy,
+                    seedColor = prefs.seedColor,
+                    seedFromPhoto = prefs.seedFromPhoto,
+                    dark = dark,
+                    onThemeMode = { prefs.updateThemeMode(it) },
+                    onAmoled = { prefs.updateAmoled(it) },
+                    onDynamicColor = { prefs.updateDynamicColor(it) },
+                    onVibrancy = { prefs.updateVibrancy(it) },
+                    onSeedColor = { prefs.updateSeedColor(it) },
+                    onSeedFromPhoto = { prefs.updateSeedFromPhoto(it) },
+                    onPickCustomColor = { picking = true },
+                )
+            }
+
+            item { SectionLabel(stringResource(R.string.folders)) }
             itemsIndexedFolders(
                 folders = folders,
                 onRename = { id, title -> renamingId = id; draft = title },
@@ -242,7 +245,7 @@ fun SettingsScreen(
                     ) {
                         Icon(Icons.Rounded.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Text(
-                            text = "Новая папка",
+                            text = stringResource(R.string.new_folder),
                             style = MaterialTheme.typography.bodyLarge.copy(fontSize = 14.5.sp),
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(start = 14.dp),
@@ -253,30 +256,25 @@ fun SettingsScreen(
         }
     }
 
+    if (picking) {
+        ColorPickerSheet(
+            onPick = { prefs.updateSeedColor(it) },
+            onDismiss = { picking = false },
+        )
+    }
+
     if (creating || renamingId != null) {
         val editingId = renamingId
-        AlertDialog(
-            onDismissRequest = { creating = false; renamingId = null },
-            title = { Text(if (editingId == null) "Новая папка" else "Имя папки") },
-            text = {
-                OutlinedTextField(
-                    value = draft,
-                    onValueChange = { draft = it },
-                    singleLine = true,
-                    shape = RoundedCornerShape(18.dp),
-                )
+        NameSheet(
+            title = if (editingId == null) stringResource(R.string.new_folder) else stringResource(R.string.folder_name),
+            value = draft,
+            onValueChange = { draft = it },
+            onConfirm = {
+                if (editingId == null) onCreateFolder(draft) else onRenameFolder(editingId, draft)
+                creating = false
+                renamingId = null
             },
-            confirmButton = {
-                TextButton(onClick = {
-                    if (editingId == null) onCreateFolder(draft) else onRenameFolder(editingId, draft)
-                    creating = false
-                    renamingId = null
-                }) { Text("Готово") }
-            },
-            dismissButton = {
-                TextButton(onClick = { creating = false; renamingId = null }) { Text("Отмена") }
-            },
-            shape = RoundedCornerShape(28.dp),
+            onDismiss = { creating = false; renamingId = null },
         )
     }
 }
@@ -302,26 +300,26 @@ private fun androidx.compose.foundation.lazy.LazyListScope.itemsIndexedFolders(
             ) {
                 Column(Modifier.weight(1f)) {
                     Text(
-                        text = folder.title,
+                        text = if (folder.isAll) stringResource(R.string.all_apps) else folder.title,
                         style = MaterialTheme.typography.bodyLarge.copy(fontSize = 14.5.sp),
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
-                        text = if (folder.isAll) "Все установленные" else "${folder.appKeys.size} приложений",
+                        text = if (folder.isAll) "Все установленные" else stringResource(R.string.apps_count, folder.appKeys.size),
                         fontFamily = MonoFont,
                         fontSize = 10.5.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                IconAction(Icons.Rounded.ArrowUpward, "Выше") { onMove(index, index - 1) }
-                IconAction(Icons.Rounded.ArrowDownward, "Ниже") { onMove(index, index + 1) }
+                IconAction(Icons.Rounded.ArrowUpward, stringResource(R.string.move_up)) { onMove(index, index - 1) }
+                IconAction(Icons.Rounded.ArrowDownward, stringResource(R.string.move_down)) { onMove(index, index + 1) }
                 if (!folder.isAll) {
-                    IconAction(Icons.Rounded.DriveFileRenameOutline, "Переименовать") {
+                    IconAction(Icons.Rounded.DriveFileRenameOutline, stringResource(R.string.rename)) {
                         onRename(folder.id, folder.title)
                     }
-                    IconAction(Icons.Rounded.Delete, "Удалить", danger = true) { onDelete(folder.id) }
+                    IconAction(Icons.Rounded.Delete, stringResource(R.string.delete), danger = true) { onDelete(folder.id) }
                 }
             }
         }
@@ -451,6 +449,63 @@ private fun <T> Segments(
                     else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
                 )
+            }
+        }
+    }
+}
+
+
+/** Ввод имени: лист снизу, поле и две кнопки-пилюли. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun NameSheet(
+    title: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
+    ) {
+        Column(
+            Modifier
+                .navigationBarsPadding()
+                .padding(start = 20.dp, end = 20.dp, bottom = 24.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmall.copy(fontSize = 22.sp),
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(bottom = 14.dp),
+            )
+            OutlinedTextField(
+                value = value,
+                onValueChange = onValueChange,
+                singleLine = true,
+                shape = RoundedCornerShape(18.dp),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp),
+            ) {
+                androidx.compose.material3.OutlinedButton(
+                    onClick = onDismiss,
+                    shape = CircleShape,
+                    modifier = Modifier.weight(1f).height(56.dp),
+                ) { Text(stringResource(R.string.cancel)) }
+                androidx.compose.material3.Button(
+                    onClick = onConfirm,
+                    shape = CircleShape,
+                    modifier = Modifier.weight(1f).height(56.dp),
+                ) { Text(stringResource(R.string.done)) }
             }
         }
     }

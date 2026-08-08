@@ -40,8 +40,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.plein.R
 import app.plein.data.AppEntry
 import app.plein.data.AppRepository
 import app.plein.data.Backdrop
@@ -129,7 +131,7 @@ fun HomeScreen(
 
                     Column(Modifier.fillMaxSize()) {
                         FolderHeader(
-                            title = folder.title,
+                            title = if (config.isAll) stringResource(R.string.all_apps) else folder.title,
                             page = index + 1,
                             pages = pages,
                             count = folder.apps.size,
@@ -207,7 +209,7 @@ private fun FolderHeader(
                         modifier = Modifier.size(16.dp),
                     )
                     Text(
-                        text = "Готово",
+                        text = stringResource(R.string.done),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier.padding(start = 6.dp),
@@ -289,7 +291,7 @@ private fun SearchPill(onClick: () -> Unit) {
                 modifier = Modifier.size(21.dp),
             )
             Text(
-                text = "Поиск по телефону",
+                text = stringResource(R.string.search_hint),
                 fontSize = 15.sp,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

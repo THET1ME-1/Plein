@@ -133,8 +133,11 @@ fun AppsGrid(
                 shape = shape,
                 showLabel = showLabels,
                 wobbling = editing && !dragging,
-                onClick = { if (!editing) onClick(entry) },
-                onLongClick = { if (!editing) onLongClick(entry) },
+                // В режиме правки ячейка не слушает нажатия: иначе она съедает
+                // долгий тап и до жеста перетаскивания дело не доходит.
+                interactive = !editing,
+                onClick = { onClick(entry) },
+                onLongClick = { onLongClick(entry) },
                 modifier = Modifier
                     .zIndex(if (dragging) 1f else 0f)
                     .graphicsLayer {
@@ -161,6 +164,7 @@ private fun AppCell(
     shape: Shape,
     showLabel: Boolean,
     wobbling: Boolean,
+    interactive: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -174,7 +178,13 @@ private fun AppCell(
             .graphicsLayer { rotationZ = if (wobble > 0f) 2f * wobble else 0f }
             // Радиус мелкий: подпись стоит у нижнего края и попадала под клип.
             .clip(RoundedCornerShape(14.dp))
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+            .then(
+                if (interactive) {
+                    Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick)
+                } else {
+                    Modifier
+                }
+            )
             .padding(bottom = 6.dp),
     ) {
         AppIcon(entry = entry, repository = repository, size = iconSize, shape = shape)

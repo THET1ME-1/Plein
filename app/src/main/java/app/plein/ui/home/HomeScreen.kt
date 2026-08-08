@@ -1,6 +1,6 @@
 package app.plein.ui.home
 
-import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -42,7 +42,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
@@ -71,7 +70,6 @@ import app.plein.data.FolderConfig
 import app.plein.data.displayTitle
 import app.plein.data.Prefs
 import app.plein.ui.rememberHaptics
-import kotlinx.coroutines.launch
 import app.plein.ui.theme.Emphasized
 import app.plein.ui.theme.MonoFont
 import app.plein.ui.theme.SheetCorner
@@ -80,11 +78,47 @@ private val BackdropHeight = 300.dp
 private val BackdropCollapsed = 92.dp
 private val SheetOverlap = 30.dp
 
-/** Полный ход оттягивания; палец проходит вдвое больше из-за резины. */
-private val PullTravel = 190.dp
+/**
+ * Полный ход оттягивания.
+ *
+ * Числа подобраны так, чтобы палец проходил около 260 dp — треть экрана.
+ * Это уверенное протягивание, случайным движением по списку не набрать, но и
+ * рука не устаёт. Прошлая резина требовала 700 dp, то есть не срабатывала.
+ */
+private val PullTravel = 130.dp
 
 /** Мёртвая зона в начале хода: случайный свайп ничего не показывает. */
 private const val PullDeadZone = 0.28f
+
+/**
+ * Резина оттягивания.
+ *
+ * Отдельно от экрана, чтобы считалась в тесте: с квадратом прирост у края
+ * стремился к нулю, полный ход был недостижим, и кадр не приходил никогда.
+ */
+object PullPhysics {
+
+    /** Срабатывает почти на полном ходу: последние проценты съедает резина. */
+    const val TRIGGER = 0.95f
+
+    fun resistance(reach: Float): Float = 0.8f * (1f - reach).coerceAtLeast(0.5f)
+
+    fun accumulate(current: Float, delta: Float, limit: Float): Float {
+        val reach = (current / limit).coerceIn(0f, 1f)
+        return (current + delta * resistance(reach)).coerceAtMost(limit)
+    }
+
+    /** Сколько пикселей пальцем нужно, чтобы дойти до срабатывания. */
+    fun travelToTrigger(limit: Float, step: Float = 12f): Float {
+        var value = 0f
+        var travelled = 0f
+        while (value < limit * TRIGGER && travelled < 10_000f) {
+            value = accumulate(value, step, limit)
+            travelled += step
+        }
+        return travelled
+    }
+}
 
 /**
  * Главный экран.
@@ -143,24 +177,22 @@ fun HomeScreen(
 
     // Ход оттягивания.
     //
-    // Тянуть надо всерьёз: полный ход это PullTravel, и палец проходит вдвое
-    // больше, потому что резина ест движение тем сильнее, чем дальше ушли.
-    // Первая четверть хода вообще ничего не показывает — это мёртвая зона под
-    // случайный свайп, из-за которого раньше индикатор выскакивал от любого
-    // движения вниз.
+    // Значение живёт обычным состоянием и меняется прямо в обработчике, а
+    // возврат анимируется внутри onPreFling — она и так suspend. Раньше и
+    // движение, и возврат шли через launch: отложенный snapTo прилетал после
+    // animateTo, отменял его, и лист застывал оттянутым с мёртвым кругом.
     val pullLimit = with(density) { PullTravel.toPx() }
-    val pull = remember { Animatable(0f) }
-    val gestures = rememberCoroutineScope()
+    var pull by remember { mutableFloatStateOf(0f) }
 
     val nested = remember(maxShift, pullLimit) {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                // Оттянутый лист сначала возвращается на место и только потом
-                // отдаёт движение списку: иначе он дёргался на полпути.
-                if (available.y < 0f && pull.value > 0f) {
-                    val next = (pull.value + available.y).coerceAtLeast(0f)
-                    val used = next - pull.value
-                    gestures.launch { pull.snapTo(next) }
+                // Оттянутый лист сначала встаёт на место и только потом отдаёт
+                // движение списку: иначе он дёргался на полпути.
+                if (available.y < 0f && pull > 0f) {
+                    val next = (pull + available.y).coerceAtLeast(0f)
+                    val used = next - pull
+                    pull = next
                     return Offset(0f, used)
                 }
                 val delta = -available.y
@@ -175,33 +207,25 @@ fun HomeScreen(
                 available: Offset,
                 source: NestedScrollSource,
             ): Offset {
-                // Тянем вниз на развёрнутой шапке — копим ход под новый кадр.
-                // Только под пальцем: на инерции список сам долетает до верха,
-                // и весь остаток хода набирал полный круг без всякого жеста.
+                // Копим ход только под пальцем: на инерции список долетает до
+                // верха сам, и остаток набирал полный круг без всякого жеста.
                 if (source != NestedScrollSource.UserInput || shift > 0f || available.y <= 0f) {
                     return Offset.Zero
                 }
-                val reach = (pull.value / pullLimit).coerceIn(0f, 1f)
-                // Резина: у края лист почти не поддаётся, случайный рывок
-                // не дотягивает до порога при всём желании.
-                val resistance = 0.62f * (1f - reach) * (1f - reach)
-                val next = (pull.value + available.y * resistance).coerceAtMost(pullLimit)
-                gestures.launch { pull.snapTo(next) }
+                pull = PullPhysics.accumulate(pull, available.y, pullLimit)
                 return Offset(0f, available.y)
             }
 
             override suspend fun onPreFling(available: Velocity): Velocity {
-                if (pull.value >= pullLimit) onPullRefresh()
-                // Лист возвращается пружиной, а не пропадает щелчком.
-                gestures.launch {
-                    pull.animateTo(
-                        targetValue = 0f,
-                        animationSpec = spring(
-                            dampingRatio = 0.58f,
-                            stiffness = Spring.StiffnessLow,
-                        ),
-                    )
-                }
+                if (pull <= 0f) return Velocity.Zero
+                // Хватает почти полного круга: добрать последние проценты
+                // мешает та же резина.
+                if (pull >= pullLimit * PullPhysics.TRIGGER) onPullRefresh()
+                animate(
+                    initialValue = pull,
+                    targetValue = 0f,
+                    animationSpec = spring(dampingRatio = 0.58f, stiffness = Spring.StiffnessLow),
+                ) { value, _ -> pull = value }
                 return Velocity.Zero
             }
         }
@@ -212,7 +236,7 @@ fun HomeScreen(
     // Щелчок на смене папки и на дотянутом жесте: рука понимает, что
     // произошло, не разглядывая экран.
     LaunchedEffect(currentPage) { haptics.tick() }
-    val reached = pull.value >= pullLimit
+    val reached = pull >= pullLimit * PullPhysics.TRIGGER
     LaunchedEffect(reached) {
         if (reached) haptics.threshold()
     }
@@ -244,7 +268,7 @@ fun HomeScreen(
             onOpenSettings = onOpenSettings,
             onSeedExtracted = onSeedExtracted,
             collapse = progress,
-            pull = ((pull.value / pullLimit - PullDeadZone) / (1f - PullDeadZone))
+            pull = ((pull / pullLimit - PullDeadZone) / (PullPhysics.TRIGGER - PullDeadZone))
                 .coerceIn(0f, 1f),
             modifier = Modifier
                 .fillMaxWidth()
@@ -252,7 +276,7 @@ fun HomeScreen(
                 .graphicsLayer {
                     // Фон отстаёт сильно и слегка наезжает: так глубина видна,
                     // а не читается как простое затемнение.
-                    translationY = -shift * 0.28f + pull.value * 0.4f
+                    translationY = -shift * 0.28f + pull * 0.4f
                     val zoom = 1f + progress * 0.12f
                     scaleX = zoom
                     scaleY = zoom
@@ -265,7 +289,7 @@ fun HomeScreen(
         Column(
             Modifier
                 .fillMaxSize()
-                .graphicsLayer { translationY = pull.value }
+                .graphicsLayer { translationY = pull }
         ) {
 
             Spacer(

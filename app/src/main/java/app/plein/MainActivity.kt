@@ -82,13 +82,13 @@ class MainActivity : ComponentActivity() {
 
             // Значки грузим все разом: ленивая подгрузка дёргала кадры на скролле.
             val density = LocalDensity.current
-            LaunchedEffect(apps, prefs.columns) {
+            LaunchedEffect(apps, prefs.columns, prefs.iconPack, prefs.iconShape) {
                 if (apps.isEmpty()) return@LaunchedEffect
                 // Ждём первый кадр: иначе прогрев конкурирует с отрисовкой экрана.
                 withFrameNanos { }
                 delay(250)
                 val sizePx = with(density) { iconSizeFor(prefs.columns).roundToPx() }
-                repository.preloadIcons(sizePx, prefs.iconShape.name, prefs.iconShape.path(sizePx))
+                repository.preloadIcons(sizePx, prefs.iconShape.name, prefs.iconShape.path(sizePx), prefs.iconPack)
             }
             LaunchedEffect(dark) { backdrop = Backdrops.firstFor(dark) }
 
@@ -145,6 +145,7 @@ class MainActivity : ComponentActivity() {
 
                     Screen.Settings -> SettingsScreen(
                         prefs = prefs,
+                        repository = repository,
                         folders = folderStore.folders,
                         isDefaultLauncher = isDefault,
                         dark = dark,

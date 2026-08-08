@@ -112,23 +112,30 @@ class AppRepository(private val context: Context) {
     }
 
     /** Готовый значок из памяти: без корутины, чтобы прокрутка не ждала диспетчер. */
-    fun cachedIcon(entry: AppEntry, sizePx: Int, shapeKey: String): ImageBitmap? =
-        iconCache.get(cacheKeyOf(entry, sizePx, shapeKey))
+    fun cachedIcon(entry: AppEntry, sizePx: Int, shapeKey: String, iconPack: String = ""): ImageBitmap? =
+        iconCache.get(cacheKeyOf(entry, sizePx, shapeKey) + "@" + iconPack)
 
     private fun cacheKeyOf(entry: AppEntry, sizePx: Int, shapeKey: String) =
         "${entry.key}@$sizePx@$shapeKey"
+
+    private val iconPacks = IconPacks(context)
+
+    fun installedIconPacks(): List<IconPacks.Pack> = iconPacks.installed()
 
     suspend fun icon(
         entry: AppEntry,
         sizePx: Int,
         shapeKey: String,
         shapePath: android.graphics.Path?,
+        iconPack: String = "",
     ): ImageBitmap? = withContext(Dispatchers.IO) {
-        val cacheKey = cacheKeyOf(entry, sizePx, shapeKey)
+        val cacheKey = cacheKeyOf(entry, sizePx, shapeKey) + "@" + iconPack
         iconCache.get(cacheKey)?.let { return@withContext it }
 
+        // Пак имеет приоритет: если для приложения там есть картинка, берём её.
+        val fromPack = if (iconPack.isEmpty()) null else iconPacks.icon(iconPack, entry.component)
         val info = synchronized(activityInfos) { activityInfos[entry.key] }
-        val drawable: Drawable = runCatching {
+        val drawable: Drawable = fromPack ?: runCatching {
             info?.getIcon(context.resources.displayMetrics.densityDpi)
         }.getOrNull() ?: return@withContext null
 
@@ -187,13 +194,14 @@ class AppRepository(private val context: Context) {
         sizePx: Int,
         shapeKey: String,
         shapePath: android.graphics.Path?,
+        iconPack: String = "",
     ) = withContext(Dispatchers.IO) {
         val entries = _apps.value
         val gate = Semaphore(4)
         coroutineScope {
             entries.map { entry ->
                 async {
-                    gate.withPermit { icon(entry, sizePx, shapeKey, shapePath) }
+                    gate.withPermit { icon(entry, sizePx, shapeKey, shapePath, iconPack) }
                 }
             }.awaitAll()
         }

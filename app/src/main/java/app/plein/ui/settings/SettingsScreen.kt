@@ -40,6 +40,7 @@ import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Label
 import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.TextFields
 import androidx.compose.material.icons.rounded.Wallpaper
@@ -73,6 +74,7 @@ import app.plein.ui.icons.IconShape
 @Composable
 fun SettingsScreen(
     prefs: Prefs,
+    repository: app.plein.data.AppRepository,
     folders: List<FolderConfig>,
     isDefaultLauncher: Boolean,
     dark: Boolean,
@@ -292,6 +294,36 @@ fun SettingsScreen(
                         place = RowPlace.Last,
                         onClick = { pickingFontFor = "clock" },
                     )
+                }
+            }
+
+            item {
+                SettingsSection(stringResource(R.string.icon_pack)) {
+                    val packs = remember { repository.installedIconPacks() }
+                    SettingsRow(
+                        icon = Icons.Rounded.Palette,
+                        title = stringResource(R.string.system_icons),
+                        place = if (packs.isEmpty()) RowPlace.Single else RowPlace.First,
+                        chipTint = if (prefs.iconPack.isEmpty()) MaterialTheme.colorScheme.onPrimary
+                        else MaterialTheme.colorScheme.onPrimaryContainer,
+                        chipBackground = if (prefs.iconPack.isEmpty()) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.primaryContainer,
+                        onClick = { prefs.updateIconPack("") },
+                    )
+                    packs.forEachIndexed { index, pack ->
+                        val active = pack.packageName == prefs.iconPack
+                        SettingsRow(
+                            icon = Icons.Rounded.Palette,
+                            title = pack.label,
+                            subtitle = pack.packageName,
+                            place = if (index == packs.lastIndex) RowPlace.Last else RowPlace.Middle,
+                            chipTint = if (active) MaterialTheme.colorScheme.onPrimary
+                            else MaterialTheme.colorScheme.onPrimaryContainer,
+                            chipBackground = if (active) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.primaryContainer,
+                            onClick = { prefs.updateIconPack(pack.packageName) },
+                        )
+                    }
                 }
             }
 

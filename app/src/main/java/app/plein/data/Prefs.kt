@@ -77,6 +77,15 @@ class Prefs(context: Context) {
     var interfaceFont by mutableStateOf(sp.getString(KEY_UI_FONT, null).orEmpty())
         private set
 
+    /** Пакет выбранного пака значков. Пусто означает системные иконки. */
+    var iconPack by mutableStateOf(sp.getString(KEY_ICON_PACK, null).orEmpty())
+        private set
+
+    fun updateIconPack(value: String) {
+        iconPack = value
+        sp.edit().putString(KEY_ICON_PACK, value).apply()
+    }
+
     fun updateClockSize(value: String) {
         clockSize = value
         sp.edit().putString(KEY_CLOCK_SIZE, value).apply()
@@ -169,6 +178,7 @@ class Prefs(context: Context) {
         const val KEY_SHOW_WEATHER = "clock_show_weather"
         const val KEY_CLOCK_FONT = "clock_font"
         const val KEY_UI_FONT = "ui_font"
+        const val KEY_ICON_PACK = "icon_pack"
 
         /** Амбра из Wickly: тёплая и спокойная в обеих темах. */
         const val DEFAULT_SEED = 0xFFC0863E.toInt()

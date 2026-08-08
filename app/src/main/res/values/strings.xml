@@ -75,4 +75,6 @@
     <string name="source_github">Source on GitHub</string>
     <string name="system">System</string>
     <string name="screen">Screen</string>
+    <string name="icon_pack">Icon pack</string>
+    <string name="system_icons">System icons</string>
 </resources>

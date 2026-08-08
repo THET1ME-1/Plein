@@ -61,6 +61,7 @@ fun AppsGrid(
     columns: Int,
     iconSize: Dp,
     iconShape: app.plein.ui.icons.IconShape,
+    iconPack: String,
     showLabels: Boolean,
     editing: Boolean,
     onReorder: (List<AppEntry>) -> Unit,
@@ -156,6 +157,7 @@ fun AppsGrid(
                 repository = repository,
                 iconSize = iconSize,
                 iconShape = iconShape,
+                iconPack = iconPack,
                 showLabel = showLabels,
                 wobbling = editing && !dragging,
                 // В режиме правки ячейка не слушает нажатия: иначе она съедает
@@ -189,6 +191,7 @@ private fun AppCell(
     repository: AppRepository,
     iconSize: Dp,
     iconShape: app.plein.ui.icons.IconShape,
+    iconPack: String,
     showLabel: Boolean,
     wobbling: Boolean,
     interactive: Boolean,
@@ -215,7 +218,7 @@ private fun AppCell(
             )
             .padding(bottom = 6.dp),
     ) {
-        AppIcon(entry = entry, repository = repository, size = iconSize, iconShape = iconShape)
+        AppIcon(entry = entry, repository = repository, size = iconSize, iconShape = iconShape, iconPack = iconPack)
         if (showLabel) {
             Spacer(Modifier.height(6.dp))
             Box(

@@ -32,6 +32,7 @@ fun AppIcon(
     repository: AppRepository,
     size: Dp,
     iconShape: IconShape,
+    iconPack: String = "",
     modifier: Modifier = Modifier,
 ) {
     val px = with(LocalDensity.current) { size.roundToPx() }
@@ -39,12 +40,12 @@ fun AppIcon(
 
     // Готовый значок берём из памяти сразу: корутина на каждую ячейку роняла
     // быструю прокрутку. Форма уже вжжена в битмап, клипа на экране нет.
-    val cached = repository.cachedIcon(entry, px, shapeKey)
-    var bitmap by remember(entry.key, px, shapeKey) { mutableStateOf(cached) }
+    val cached = repository.cachedIcon(entry, px, shapeKey, iconPack)
+    var bitmap by remember(entry.key, px, shapeKey, iconPack) { mutableStateOf(cached) }
 
-    LaunchedEffect(entry.key, px, shapeKey) {
+    LaunchedEffect(entry.key, px, shapeKey, iconPack) {
         if (bitmap == null) {
-            bitmap = repository.icon(entry, px, shapeKey, iconShape.path(px))
+            bitmap = repository.icon(entry, px, shapeKey, iconShape.path(px), iconPack)
         }
     }
 

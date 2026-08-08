@@ -75,4 +75,6 @@
     <string name="source_github">Код на GitHub</string>
     <string name="system">Система</string>
     <string name="screen">Екран</string>
+    <string name="icon_pack">Пак значків</string>
+    <string name="system_icons">Системні значки</string>
 </resources>

@@ -94,6 +94,7 @@ fun HomeScreen(
     val columns = prefs.columns
     val iconSize = iconSizeFor(columns)
     val iconShape = prefs.iconShape
+    val iconPack = prefs.iconPack
 
     Box(
         Modifier
@@ -150,6 +151,7 @@ fun HomeScreen(
                             columns = columns,
                             iconSize = iconSize,
                             iconShape = iconShape,
+                            iconPack = iconPack,
                             showLabels = prefs.showLabels,
                             editing = editing,
                             onReorder = { onReorder(config, it) },

@@ -32,6 +32,8 @@ class AppRepository(private val context: Context) {
     private val launcherApps =
         context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
 
+    private val labels = context.getSharedPreferences("plein_labels", Context.MODE_PRIVATE)
+
     private val _apps = MutableStateFlow<List<AppEntry>>(emptyList())
     val apps: StateFlow<List<AppEntry>> = _apps
 
@@ -72,6 +74,9 @@ class AppRepository(private val context: Context) {
                         category = runCatching {
                             pm.getApplicationInfo(info.componentName.packageName, 0).category
                         }.getOrDefault(android.content.pm.ApplicationInfo.CATEGORY_UNDEFINED),
+                        customLabel = labels.getString(
+                            "${info.componentName.flattenToShortString()}#${user.hashCode()}", null
+                        ),
                     )
                 }
         }.sortedWith { a, b -> collator.compare(a.title, b.title) }
@@ -119,6 +124,17 @@ class AppRepository(private val context: Context) {
             drawable.draw(canvas)
         }
         return output
+    }
+
+    /** Своё имя приложения на экране. Пустая строка возвращает системное. */
+    fun setCustomLabel(key: String, label: String) {
+        val trimmed = label.trim()
+        labels.edit().apply {
+            if (trimmed.isEmpty()) remove(key) else putString(key, trimmed)
+        }.apply()
+        _apps.value = _apps.value.map {
+            if (it.key == key) it.copy(customLabel = trimmed.ifEmpty { null }) else it
+        }
     }
 
     fun launch(entry: AppEntry) {

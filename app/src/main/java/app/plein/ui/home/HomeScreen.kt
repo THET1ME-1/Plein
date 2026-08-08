@@ -1,13 +1,14 @@
 package app.plein.ui.home
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,15 +18,13 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
@@ -39,20 +38,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.plein.data.AppEntry
 import app.plein.data.AppRepository
-import app.plein.data.Folder
+import app.plein.data.Backdrop
+import app.plein.data.FolderConfig
 import app.plein.data.Prefs
 import app.plein.ui.theme.Emphasized
 import app.plein.ui.theme.MonoFont
 import app.plein.ui.theme.SheetCorner
-import androidx.compose.animation.core.tween
 
 private val BackdropHeight = 244.dp
 private val SheetOverlap = 30.dp
@@ -60,27 +57,39 @@ private val SheetOverlap = 30.dp
 /**
  * Главный экран.
  *
- * Кадр сверху, лист с приложениями наезжает на него скруглением 30,
- * точки и поиск закреплены внизу: поиск ищет по телефону, а не по папке,
- * поэтому он не уезжает вместе со страницами.
+ * Страницы листаются по кругу: с последней папки свайп уводит на первую.
+ * Поиск и точки закреплены внизу, они живут вне листалки.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
-    folders: List<Folder>,
+    folders: List<FolderConfig>,
+    apps: List<AppEntry>,
     repository: AppRepository,
     prefs: Prefs,
-    backdropAuthor: String,
+    backdrop: Backdrop,
+    editing: Boolean,
     onShuffleBackdrop: () -> Unit,
     onSeedExtracted: (androidx.compose.ui.graphics.Color) -> Unit,
     onOpenSearch: () -> Unit,
-    onAppMenu: (AppEntry) -> Unit,
     onOpenSettings: () -> Unit,
+    onAppMenu: (AppEntry) -> Unit,
+    onReorder: (FolderConfig, List<AppEntry>) -> Unit,
+    onFinishEditing: () -> Unit,
 ) {
-    val pagerState = rememberPagerState(pageCount = { folders.size.coerceAtLeast(1) })
+    val pages = folders.size.coerceAtLeast(1)
+    val cyclic = pages > 1
+
+    // Бесконечная лента: стартуем из середины, чтобы круг работал в обе стороны.
+    val startPage = remember(pages) { if (cyclic) (Int.MAX_VALUE / 2) - (Int.MAX_VALUE / 2) % pages else 0 }
+    val pagerState = rememberPagerState(
+        initialPage = startPage,
+        pageCount = { if (cyclic) Int.MAX_VALUE else 1 },
+    )
+    val currentPage = (pagerState.currentPage - startPage).mod(pages)
+
     val columns = prefs.columns
     val iconSize = iconSizeFor(columns)
-    val rowGap = if (columns >= 5) 12.dp else 20.dp
     val shape = remember(prefs.iconShape) { prefs.iconShape.shape() }
 
     Box(
@@ -89,9 +98,9 @@ fun HomeScreen(
             .background(MaterialTheme.colorScheme.surface)
     ) {
         Backdrop(
-            author = backdropAuthor,
+            backdrop = backdrop,
             onShuffle = onShuffleBackdrop,
-            onLongPress = onOpenSettings,
+            onOpenSettings = onOpenSettings,
             onSeedExtracted = onSeedExtracted,
             modifier = Modifier
                 .fillMaxWidth()
@@ -111,43 +120,39 @@ fun HomeScreen(
             ) {
                 HorizontalPager(
                     state = pagerState,
+                    userScrollEnabled = !editing,
                     modifier = Modifier.fillMaxSize(),
                 ) { page ->
-                    val folder = folders.getOrNull(page) ?: return@HorizontalPager
+                    val index = (page - startPage).mod(pages)
+                    val config = folders.getOrNull(index) ?: return@HorizontalPager
+                    val folder = remember(config, apps) { config.resolve(apps) }
+
                     Column(Modifier.fillMaxSize()) {
                         FolderHeader(
                             title = folder.title,
-                            page = page + 1,
-                            pages = folders.size,
+                            page = index + 1,
+                            pages = pages,
                             count = folder.apps.size,
+                            editing = editing,
+                            onFinishEditing = onFinishEditing,
                         )
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(columns),
-                            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(rowGap),
-                            modifier = Modifier.fillMaxSize(),
-                        ) {
-                            items(folder.apps, key = { it.key }) { entry ->
-                                AppCell(
-                                    entry = entry,
-                                    repository = repository,
-                                    iconSize = iconSize,
-                                    shape = shape,
-                                    showLabel = prefs.showLabels,
-                                    onClick = { repository.launch(entry) },
-                                    onLongClick = { onAppMenu(entry) },
-                                )
-                            }
-                        }
+                        AppsGrid(
+                            apps = folder.apps,
+                            repository = repository,
+                            columns = columns,
+                            iconSize = iconSize,
+                            shape = shape,
+                            showLabels = prefs.showLabels,
+                            editing = editing,
+                            onReorder = { onReorder(config, it) },
+                            onClick = { repository.launch(it) },
+                            onLongClick = onAppMenu,
+                        )
                     }
                 }
             }
 
-            PageDots(
-                pages = folders.size,
-                current = pagerState.currentPage,
-            )
+            PageDots(pages = pages, current = currentPage)
 
             SearchPill(onClick = onOpenSearch)
         }
@@ -162,7 +167,14 @@ private fun iconSizeFor(columns: Int): Dp = when (columns) {
 }
 
 @Composable
-private fun FolderHeader(title: String, page: Int, pages: Int, count: Int) {
+private fun FolderHeader(
+    title: String,
+    page: Int,
+    pages: Int,
+    count: Int,
+    editing: Boolean,
+    onFinishEditing: () -> Unit,
+) {
     Row(
         verticalAlignment = Alignment.Bottom,
         modifier = Modifier
@@ -177,59 +189,40 @@ private fun FolderHeader(title: String, page: Int, pages: Int, count: Int) {
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
-        Text(
-            text = "$page / $pages · $count",
-            fontFamily = MonoFont,
-            fontSize = 11.sp,
-            letterSpacing = 0.9.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 12.dp, bottom = 3.dp),
-        )
-    }
-}
 
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun AppCell(
-    entry: AppEntry,
-    repository: AppRepository,
-    iconSize: Dp,
-    shape: Shape,
-    showLabel: Boolean,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .fillMaxWidth()
-            // Скругление ячейки съедало края подписи: она стоит у самого низа,
-            // поэтому радиус мельче, а под текстом остаётся отступ.
-            .clip(RoundedCornerShape(14.dp))
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .padding(bottom = 6.dp),
-    ) {
-        AppIcon(entry = entry, repository = repository, size = iconSize, shape = shape)
-        if (showLabel) {
-            Spacer(Modifier.height(6.dp))
-            // Box держит ширину ячейки, иначе длинное имя вылезает за колонку
-            // и обрезается клипом с обеих сторон вместо честного многоточия.
-            Box(
-                modifier = Modifier.width(iconSize + 18.dp),
-                contentAlignment = Alignment.Center,
+        if (editing) {
+            Surface(
+                color = MaterialTheme.colorScheme.primary,
+                shape = CircleShape,
+                modifier = Modifier.clip(CircleShape).clickable(onClick = onFinishEditing),
             ) {
-                // Выравнивание держит Box: при textAlign = Center длинное имя
-                // рисуется от центра и первая буква уходит под клип ячейки.
-                Text(
-                    text = entry.title,
-                    fontSize = 10.5.sp,
-                    lineHeight = 12.sp,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
+                ) {
+                    Icon(
+                        Icons.Rounded.Check,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Text(
+                        text = "Готово",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.padding(start = 6.dp),
+                    )
+                }
             }
+        } else {
+            Text(
+                text = "$page / $pages · $count",
+                fontFamily = MonoFont,
+                fontSize = 11.sp,
+                letterSpacing = 0.9.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 12.dp, bottom = 3.dp),
+            )
         }
     }
 }

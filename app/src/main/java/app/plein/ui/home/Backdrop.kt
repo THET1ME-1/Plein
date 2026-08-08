@@ -6,14 +6,17 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -36,6 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.plein.data.Backdrop
 import app.plein.data.PhotoPalette
 import app.plein.ui.theme.MonoFont
 import kotlinx.coroutines.Dispatchers
@@ -46,24 +50,24 @@ import java.util.Locale
 
 /**
  * Верхняя зона: кадр, затемнение под текст, часы и подпись автора.
- * Размеры взяты из макета: сцена 244, часы от низа 54, подпись от низа 40.
+ * Размеры из макета: сцена 244, часы от низа 54, подпись от низа 40.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun Backdrop(
-    author: String,
+    backdrop: Backdrop,
     onShuffle: () -> Unit,
-    onLongPress: () -> Unit,
+    onOpenSettings: () -> Unit,
     onSeedExtracted: (Color) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    var photo by remember { mutableStateOf<ImageBitmap?>(null) }
+    var photo by remember(backdrop.asset) { mutableStateOf<ImageBitmap?>(null) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(backdrop.asset) {
         val decoded = withContext(Dispatchers.IO) {
             runCatching {
-                context.assets.open("default_backdrop.jpg").use { BitmapFactory.decodeStream(it) }
+                context.assets.open(backdrop.asset).use { BitmapFactory.decodeStream(it) }
             }.getOrNull()
         } ?: return@LaunchedEffect
 
@@ -84,7 +88,7 @@ fun Backdrop(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = {},
-                onLongClick = onLongPress,
+                onLongClick = onOpenSettings,
             )
     ) {
         photo?.let {
@@ -96,7 +100,6 @@ fun Backdrop(
             )
         }
 
-        // Затемнение сверху под статус-бар и снизу под часы.
         Box(
             Modifier
                 .fillMaxSize()
@@ -109,22 +112,18 @@ fun Backdrop(
                 )
         )
 
-        Box(
-            Modifier
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(top = 46.dp, end = 12.dp)
-                .size(38.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.22f))
-                .combinedClickable(onClick = onShuffle),
-            contentAlignment = Alignment.Center,
+                .padding(top = 46.dp, end = 12.dp),
         ) {
-            Icon(
-                Icons.Rounded.Refresh,
-                contentDescription = "Другой кадр",
-                tint = Color.White,
-                modifier = Modifier.size(20.dp),
-            )
+            GlassButton(onClick = onShuffle, description = "Другой кадр") {
+                Icon(Icons.Rounded.Refresh, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+            }
+            GlassButton(onClick = onOpenSettings, description = "Настройки") {
+                Icon(Icons.Rounded.Tune, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+            }
         }
 
         Column(
@@ -152,7 +151,7 @@ fun Backdrop(
         }
 
         Text(
-            text = "Фото: $author · Unsplash",
+            text = "Фото: ${backdrop.author} · Unsplash",
             fontFamily = MonoFont,
             fontSize = 9.5.sp,
             letterSpacing = 0.4.sp,
@@ -163,4 +162,21 @@ fun Backdrop(
                 .padding(end = 14.dp, bottom = 40.dp),
         )
     }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun GlassButton(
+    onClick: () -> Unit,
+    description: String,
+    content: @Composable () -> Unit,
+) {
+    Box(
+        Modifier
+            .size(38.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.22f))
+            .combinedClickable(onClick = onClick, onClickLabel = description),
+        contentAlignment = Alignment.Center,
+    ) { content() }
 }

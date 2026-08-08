@@ -29,6 +29,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
@@ -75,11 +76,13 @@ fun SearchScreen(
     repository: AppRepository,
     iconShape: app.plein.ui.icons.IconShape,
     webProvider: String = "google",
+    initialQuery: String = "",
+    onVoice: (() -> Unit)? = null,
     onAppMenu: (AppEntry) -> Unit,
     onClose: () -> Unit,
 ) {
     val context = LocalContext.current
-    var query by remember { mutableStateOf("") }
+    var query by remember { mutableStateOf(initialQuery) }
     val focus = remember { FocusRequester() }
 
     LaunchedEffect(Unit) { focus.requestFocus() }
@@ -329,6 +332,24 @@ fun SearchScreen(
                                 .fillMaxWidth()
                                 .focusRequester(focus),
                         )
+                    }
+                    // Микрофон рядом с крестиком: в поиске он нужнее всего,
+                    // когда набирать долго. Нет распознавания — нет и кнопки.
+                    onVoice?.let { voice ->
+                        Box(
+                            Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .clickable(onClick = voice),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                Icons.Rounded.Mic,
+                                contentDescription = stringResource(R.string.voice_search),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
                     }
                     Box(
                         Modifier

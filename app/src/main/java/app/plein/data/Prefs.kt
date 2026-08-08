@@ -121,6 +121,24 @@ class Prefs(context: Context) {
         sp.edit().putBoolean(KEY_G_PINCH, value).apply()
     }
 
+    /** Текст плитки-заметки. */
+    var noteText by mutableStateOf(sp.getString(KEY_NOTE, null).orEmpty())
+        private set
+
+    fun updateNoteText(value: String) {
+        noteText = value
+        sp.edit().putString(KEY_NOTE, value).apply()
+    }
+
+    /** Высота клетки сетки: от неё зависит, сколько строк влезет в экран. */
+    var rowHeight by mutableIntStateOf(sp.getInt(KEY_ROW_HEIGHT, 96))
+        private set
+
+    fun updateRowHeight(value: Int) {
+        rowHeight = value
+        sp.edit().putInt(KEY_ROW_HEIGHT, value).apply()
+    }
+
     /** Куда уходит запрос из строки поиска. */
     var webProvider by mutableStateOf(sp.getString(KEY_WEB, null) ?: "google")
         private set
@@ -368,6 +386,8 @@ class Prefs(context: Context) {
         const val KEY_PAGE_INDICATOR = "page_indicator"
         const val KEY_MONO = "mono_icons"
         const val KEY_WEB = "web_provider"
+        const val KEY_NOTE = "note_text"
+        const val KEY_ROW_HEIGHT = "row_height"
         const val KEY_G_LOCK = "gesture_lock"
         const val KEY_G_SHADE = "gesture_shade"
         const val KEY_G_PINCH = "gesture_pinch"

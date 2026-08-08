@@ -46,6 +46,15 @@ import app.plein.ui.theme.isDark
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 
+/** Название плитки для листов выбора. */
+private fun tileTitle(kind: String): Int = when (kind) {
+    app.plein.ui.home.Tiles.CLOCK -> R.string.tile_clock
+    app.plein.ui.home.Tiles.WEATHER -> R.string.tile_weather
+    app.plein.ui.home.Tiles.BATTERY -> R.string.tile_battery
+    app.plein.ui.home.Tiles.CALENDAR -> R.string.tile_calendar
+    else -> R.string.tile_note
+}
+
 /** Экраны лаунчера. Один активен за раз, домашний всегда под ними. */
 private enum class Screen { Home, Search, Settings, Overview }
 
@@ -70,6 +79,7 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
     private lateinit var prefs: Prefs
     private lateinit var folderStore: FolderStore
     private lateinit var backdropSource: BackdropSource
+    private lateinit var layoutStore: app.plein.data.LayoutStore
     private lateinit var hiddenApps: app.plein.data.HiddenApps
     private lateinit var backdropLibrary: app.plein.data.BackdropLibrary
     private lateinit var backdropPicker: app.plein.data.BackdropPicker
@@ -82,6 +92,7 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
         prefs = Prefs(this)
         folderStore = FolderStore(this)
         backdropSource = BackdropSource(this)
+        layoutStore = app.plein.data.LayoutStore(this)
         hiddenApps = app.plein.data.HiddenApps(this)
         backdropLibrary = app.plein.data.BackdropLibrary(this)
         backdropPicker = app.plein.data.BackdropPicker(
@@ -117,6 +128,9 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
             var loadingBackdrop by remember { mutableStateOf(false) }
             var backdropProgress by remember { mutableFloatStateOf(0f) }
             var backdropFailure by remember { mutableStateOf<String?>(null) }
+            var tileMenu by remember { mutableStateOf<Pair<String, app.plein.data.CellItem>?>(null) }
+            var editingNote by remember { mutableStateOf(false) }
+            var addingTileTo by remember { mutableStateOf<String?>(null) }
             var weatherTemp by remember { mutableStateOf<String?>(null) }
             var weatherCode by remember { mutableIntStateOf(0) }
             var weatherTick by remember { mutableIntStateOf(0) }
@@ -190,6 +204,34 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
             ) { isDefault = DefaultLauncher.isDefault(context) }
 
             val haptics = app.plein.ui.rememberHaptics()
+
+            // Голос: распознаёт система, лаунчер только забирает текст и
+            // открывает с ним поиск. Слушать некому — кнопки в пилюле нет.
+            var spokenQuery by remember { mutableStateOf("") }
+            val voiceLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.StartActivityForResult()
+            ) { result ->
+                val spoken = app.plein.data.Voice.textOf(result.data)
+                if (spoken.isBlank()) return@rememberLauncherForActivityResult
+                spokenQuery = spoken
+                screen = Screen.Search
+                haptics.confirm()
+            }
+            val voiceReady = remember { app.plein.data.Voice.available(context) }
+            val startVoice: (() -> Unit)? = if (voiceReady) {
+                {
+                    runCatching { voiceLauncher.launch(app.plein.data.Voice.recognizeIntent(context)) }
+                        .onFailure {
+                            // Распознавание пропало между проверкой и запуском —
+                            // зовём голосового помощника, он есть почти везде.
+                            runCatching { startActivity(app.plein.data.Voice.assistantIntent()) }
+                        }
+                }
+            } else if (app.plein.data.Voice.assistantAvailable(context)) {
+                { runCatching { startActivity(app.plein.data.Voice.assistantIntent()) }; Unit }
+            } else {
+                null
+            }
 
             // Обновление живёт целиком в лаунчере: проверка, скачивание своего
             // куска по ABI и системный установщик. Под Obtainium и магазинами
@@ -436,6 +478,78 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                             onFail = { haptics.reject() },
                         )
                     },
+                    onVoice = startVoice,
+                    tilesOf = { folderId -> layoutStore.tiles(folderId) },
+                    onTileMove = { folderId, item, cell ->
+                        layoutStore.move(folderId, item, cell, prefs.columns)
+                    },
+                    onTileMenu = { folderId, item -> tileMenu = folderId to item },
+                    onAddTile = { folderId -> addingTileTo = folderId },
+                    tileContent = { kind ->
+                        // Плитки живут на настоящих данных: время идёт, заряд
+                        // меняется, погода та же, что на кадре.
+                        when (kind) {
+                            app.plein.ui.home.Tiles.CLOCK -> {
+                                val now = java.util.Date()
+                                val locale = java.util.Locale.getDefault()
+                                app.plein.ui.home.ClockTile(
+                                    time = java.text.SimpleDateFormat(
+                                        if (prefs.clockTwentyFour) "HH:mm" else "h:mm a", locale,
+                                    ).format(now),
+                                    date = java.text.SimpleDateFormat("EEE, d MMM", locale)
+                                        .format(now).uppercase(locale),
+                                    onClick = {
+                                        runCatching {
+                                            startActivity(
+                                                android.content.Intent(android.provider.AlarmClock.ACTION_SHOW_ALARMS)
+                                            )
+                                        }
+                                    },
+                                )
+                            }
+
+                            app.plein.ui.home.Tiles.WEATHER -> app.plein.ui.home.WeatherTile(
+                                temperature = weatherTemp,
+                                code = weatherCode,
+                                place = prefs.weatherProvider,
+                                onClick = {
+                                    val pkg = prefs.weatherApp
+                                    if (pkg.isNotEmpty()) {
+                                        packageManager.getLaunchIntentForPackage(pkg)?.let { intent ->
+                                            runCatching { startActivity(intent) }
+                                        }
+                                    }
+                                },
+                            )
+
+                            app.plein.ui.home.Tiles.BATTERY -> {
+                                val battery = app.plein.data.rememberBattery()
+                                app.plein.ui.home.BatteryTile(
+                                    percent = battery.percent,
+                                    charging = battery.charging,
+                                )
+                            }
+
+                            app.plein.ui.home.Tiles.NOTE -> app.plein.ui.home.NoteTile(
+                                text = prefs.noteText.ifEmpty { getString(R.string.note_hint) },
+                                onClick = { editingNote = true },
+                            )
+
+                            else -> app.plein.ui.home.CalendarTile(
+                                title = getString(R.string.no_events),
+                                time = "",
+                                onClick = {
+                                    runCatching {
+                                        startActivity(
+                                            android.content.Intent(android.content.Intent.ACTION_VIEW)
+                                                .setData(android.provider.CalendarContract.CONTENT_URI.buildUpon()
+                                                    .appendPath("time").build())
+                                        )
+                                    }
+                                },
+                            )
+                        }
+                    },
                     onDoubleTap = {
                         if (!app.plein.data.PleinGestures.lockScreen()) {
                             runCatching { startActivity(app.plein.data.PleinGestures.settingsIntent()) }
@@ -475,8 +589,13 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                         repository = repository,
                         iconShape = prefs.iconShape,
                         webProvider = prefs.webProvider,
+                        initialQuery = spokenQuery,
+                        onVoice = startVoice,
                         onAppMenu = { menuFor = it },
-                        onClose = { screen = Screen.Home },
+                        onClose = {
+                            screen = Screen.Home
+                            spokenQuery = ""
+                        },
                     )
                 }
 
@@ -551,6 +670,54 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                                 ).show()
                             }
                         },
+                    )
+                }
+
+                // Плитку добавляют из режима правки, убирают и меняют размер
+                // из её же меню — отдельного экрана для этого не нужно.
+                addingTileTo?.let { folderId ->
+                    app.plein.ui.settings.ChoiceSheetPublic(
+                        title = getString(R.string.add_tile),
+                        options = app.plein.ui.home.Tiles.all.map { kind ->
+                            kind to getString(tileTitle(kind))
+                        },
+                        selected = "",
+                        onPick = { kind ->
+                            layoutStore.add(folderId, kind, prefs.columns)
+                            haptics.confirm()
+                        },
+                        onDismiss = { addingTileTo = null },
+                    )
+                }
+
+                tileMenu?.let { (folderId, item) ->
+                    val kind = (item as? app.plein.data.CellItem.Tile)?.kind.orEmpty()
+                    val sizes = app.plein.data.TileSizes.variants(kind)
+                    app.plein.ui.settings.ChoiceSheetPublic(
+                        title = getString(tileTitle(kind)),
+                        options = sizes.map { (w, h) -> "$w:$h" to "$w × $h" } +
+                            listOf("remove" to getString(R.string.tile_remove)),
+                        selected = "",
+                        onPick = { choice ->
+                            if (choice == "remove") {
+                                layoutStore.remove(folderId, item)
+                            } else {
+                                val (w, h) = choice.split(':').map { it.toInt() }
+                                layoutStore.resize(folderId, item, w, h, prefs.columns)
+                            }
+                            haptics.confirm()
+                        },
+                        onDismiss = { tileMenu = null },
+                    )
+                }
+
+                if (editingNote) {
+                    app.plein.ui.settings.NameSheetPublic(
+                        title = getString(R.string.tile_note),
+                        value = prefs.noteText,
+                        onValueChange = { prefs.updateNoteText(it) },
+                        onConfirm = { editingNote = false },
+                        onDismiss = { editingNote = false },
                     )
                 }
 

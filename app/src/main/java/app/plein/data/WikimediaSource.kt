@@ -92,8 +92,9 @@ class WikimediaSource(private val context: Context) {
      * Список снимков из категории.
      *
      * Срез берём со случайной буквы алфавита: без неё выдача одна и та же от
-     * запроса к запросу — пятьдесят одних и тех же файлов, и как только они
-     * показаны, категория молчит навсегда.
+     * запроса к запросу, и как только показаны все, категория молчит навсегда.
+     * Берём сразу пятьсот — в категориях по две-три сотни файлов и больше,
+     * а полсотни кончались за вечер.
      */
     private fun search(category: String, screenWidth: Int): List<Shot> {
         val width = (screenWidth * 1.4f).toInt().coerceIn(720, 2000)
@@ -101,7 +102,9 @@ class WikimediaSource(private val context: Context) {
         val url = URL(
             "https://commons.wikimedia.org/w/api.php?action=query&format=json" +
                 "&generator=categorymembers&gcmtitle=" + URLEncoder.encode(category, "UTF-8") +
-                "&gcmtype=file&gcmlimit=50&gcmstartsortkeyprefix=$from" +
+                // Пятьсот за раз: это потолок для обычного клиента, ответ
+                // весит около двухсот килобайт и заменяет десяток запросов.
+                "&gcmtype=file&gcmlimit=500&gcmstartsortkeyprefix=$from" +
                 "&prop=imageinfo&iiprop=url%7Cextmetadata%7Csize&iiurlwidth=$width"
         )
         val connection = (url.openConnection() as HttpURLConnection).apply {
@@ -214,18 +217,25 @@ class WikimediaSource(private val context: Context) {
         /** Буквы для случайного среза по алфавиту. */
         private val ALPHABET = ('a'..'z').toList() + ('0'..'9').toList()
 
-        /** Отобранные людьми категории: там снимки, а не документы и схемы. */
+        /**
+         * Отобранные людьми категории: там снимки, а не документы и схемы.
+         *
+         * Числа рядом — сколько файлов в категории на август 2026. Мелкие
+         * выброшены: «Quality images of skies» и «of seas» оказались пустыми,
+         * «of nature» — тринадцать файлов, на них подборка кончалась сразу.
+         */
         val LANDSCAPES = listOf(
-            "Category:Featured pictures of landscapes",
-            "Category:Quality images of landscapes",
-            "Category:Featured pictures of nature",
-            "Category:Quality images of mountains",
-            "Category:Quality images of forests",
-            "Category:Quality images of lakes",
-            "Category:Featured pictures of cityscapes",
-            "Category:Quality images of skies",
-            "Category:Quality images of sunsets",
-            "Category:Quality images of seas",
+            "Category:Quality images of nature",              // 1094
+            "Category:Quality images of landscapes",          // 566
+            "Category:Quality images of valleys",             // 552
+            "Category:Featured pictures of cityscapes",       // 519
+            "Category:Featured pictures of landscapes",       // 512
+            "Category:Quality images of sunsets",             // 511
+            "Category:Quality images of lakes",               // 356
+            "Category:Quality images of cityscapes",          // 239
+            "Category:Quality images of mountains",           // 225
+            "Category:Quality images of waterfalls",          // 173
+            "Category:Featured pictures of mountains",        // 158
         )
 
         /**

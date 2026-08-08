@@ -1,5 +1,6 @@
 package app.plein.ui.home
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -27,6 +28,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Lock
@@ -150,6 +152,12 @@ fun HomeScreen(
     onAppMenu: (AppEntry) -> Unit,
     onReorder: (FolderConfig, List<AppEntry>) -> Unit,
     onFinishEditing: () -> Unit,
+    onVoice: (() -> Unit)? = null,
+    tilesOf: (String) -> List<app.plein.data.Placement> = { emptyList() },
+    onTileMove: (String, app.plein.data.CellItem, app.plein.data.Cell) -> Boolean = { _, _, _ -> false },
+    onTileMenu: (String, app.plein.data.CellItem) -> Unit = { _, _ -> },
+    tileContent: @Composable (String) -> Unit = {},
+    onAddTile: (String) -> Unit = {},
     onDoubleTap: () -> Unit = {},
     onShade: () -> Unit = {},
     onOverview: () -> Unit = {},
@@ -390,28 +398,58 @@ fun HomeScreen(
                             count = folder.apps.size,
                             editing = editing,
                             onFinishEditing = onFinishEditing,
+                            onAddTile = { onAddTile(config.id) },
                         )
-                        AppsGrid(
-                            apps = folder.apps,
-                            repository = repository,
-                            columns = columns,
-                            iconSize = iconSize,
-                            iconShape = iconShape,
-                            iconPack = iconPack,
-                            monoMode = monoMode,
-                            showLabels = prefs.showLabels,
-                            editing = editing,
-                            onReorder = { onReorder(config, it) },
-                            onClick = { repository.launch(it) },
-                            onLongClick = onAppMenu,
-                        )
+                        val tiles = tilesOf(config.id)
+                        if (tiles.isEmpty()) {
+                            // Без плиток оставляем ленивую сетку: на странице
+                            // «Все приложения» их под сотню, и рисовать все
+                            // разом ради пустой раскладки незачем.
+                            AppsGrid(
+                                apps = folder.apps,
+                                repository = repository,
+                                columns = columns,
+                                iconSize = iconSize,
+                                iconShape = iconShape,
+                                iconPack = iconPack,
+                                monoMode = monoMode,
+                                showLabels = prefs.showLabels,
+                                editing = editing,
+                                onReorder = { onReorder(config, it) },
+                                onClick = { repository.launch(it) },
+                                onLongClick = onAppMenu,
+                            )
+                        } else {
+                            TilePage(
+                                apps = folder.apps,
+                                tiles = tiles,
+                                repository = repository,
+                                columns = columns,
+                                rowHeight = prefs.rowHeight.dp,
+                                iconSize = iconSize,
+                                iconShape = iconShape,
+                                iconPack = iconPack,
+                                monoMode = monoMode,
+                                showLabels = prefs.showLabels,
+                                editing = editing,
+                                tileContent = tileContent,
+                                onClick = { repository.launch(it) },
+                                onLongClick = onAppMenu,
+                                onTileMenu = { item -> onTileMenu(config.id, item) },
+                                onTileMove = { item, cell -> onTileMove(config.id, item, cell) },
+                            )
+                        }
                     }
                 }
             }
 
             PageIndicator(style = prefs.pageIndicator, pages = pages, current = currentPage)
 
-            SearchPill(onClick = onOpenSearch)
+            SearchPill(
+                onClick = onOpenSearch,
+                onVoice = onVoice,
+                onApps = onOverview,
+            )
         }
     }
 }
@@ -431,6 +469,7 @@ private fun FolderHeader(
     count: Int,
     editing: Boolean,
     onFinishEditing: () -> Unit,
+    onAddTile: (() -> Unit)? = null,
 ) {
     Row(
         verticalAlignment = Alignment.Bottom,
@@ -448,6 +487,35 @@ private fun FolderHeader(
         )
 
         if (editing) {
+            // Плитку добавляют отсюда: правка уже включена, лишний экран не нужен.
+            onAddTile?.let { add ->
+                Surface(
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    shape = CircleShape,
+                    modifier = Modifier
+                        .padding(end = 8.dp)
+                        .clip(CircleShape)
+                        .clickable(onClick = add),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                    ) {
+                        Icon(
+                            Icons.Rounded.Add,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Text(
+                            text = stringResource(R.string.tiles),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.padding(start = 6.dp),
+                        )
+                    }
+                }
+            }
             Surface(
                 color = MaterialTheme.colorScheme.primary,
                 shape = CircleShape,
@@ -485,14 +553,14 @@ private fun FolderHeader(
 }
 
 @Composable
-private fun PageIndicator(style: String, pages: Int, current: Int) {
+internal fun PageIndicator(style: String, pages: Int, current: Int) {
     // Одна страница — показывать нечего ни точками, ни полосой, ни «1 / 1».
     if (style == "none" || pages < 2) {
         Spacer(Modifier.height(12.dp))
         return
     }
-    if (style == "numbers") {
-        Text(
+    when (style) {
+        "numbers" -> Text(
             text = "${current + 1} / $pages",
             fontFamily = MonoFont,
             fontSize = 12.sp,
@@ -502,37 +570,104 @@ private fun PageIndicator(style: String, pages: Int, current: Int) {
                 .padding(top = 10.dp, bottom = 12.dp),
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         )
-        return
-    }
-    if (style == "bar") {
-        // Ход считаем анимацией, а не прыжком по страницам: полоса едет вместе
-        // со свайпом. Сдвиг стоит в цепочке до заливки — иначе слой двигает
-        // пустоту, а закрашенный прямоугольник остаётся на месте.
-        val travel by animateFloatAsState(
-            targetValue = current.toFloat(),
-            animationSpec = tween(durationMillis = 280, easing = Emphasized),
-            label = "indicator",
+
+        // Короткая полоса по центру.
+        "bar" -> TravellingBar(
+            pages = pages,
+            current = current,
+            sidePadding = 60.dp,
+            height = 4.dp,
+            verticalPadding = 14.dp,
         )
+
+        // Широкая: та же полоса, но во всю ширину и заметно толще.
+        "wide" -> TravellingBar(
+            pages = pages,
+            current = current,
+            sidePadding = 16.dp,
+            height = 7.dp,
+            verticalPadding = 12.dp,
+        )
+
+        // Кромка: линия впритык к краям, как у ленты историй.
+        "edge" -> TravellingBar(
+            pages = pages,
+            current = current,
+            sidePadding = 0.dp,
+            height = 3.dp,
+            verticalPadding = 16.dp,
+        )
+
+        // Сегменты: каждой странице свой кусок во всю ширину.
+        "segments" -> Row(
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 13.dp),
+        ) {
+            repeat(pages) { index ->
+                val active = index == current
+                val fill by animateColorAsState(
+                    targetValue = if (active) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.outlineVariant,
+                    animationSpec = tween(260, easing = Emphasized),
+                    label = "segment",
+                )
+                val thickness by animateFloatAsState(
+                    targetValue = if (active) 6f else 4f,
+                    animationSpec = tween(260, easing = Emphasized),
+                    label = "thickness",
+                )
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .height(thickness.dp)
+                        .clip(CircleShape)
+                        .background(fill)
+                )
+            }
+        }
+
+        else -> PageDots(pages = pages, current = current)
+    }
+}
+
+/**
+ * Полоса, по которой едет отметка страницы.
+ *
+ * Сдвиг стоит в цепочке до заливки: слой двигает то, что нарисовано после
+ * него, и с заливкой впереди полоса оставалась на месте.
+ */
+@Composable
+private fun TravellingBar(
+    pages: Int,
+    current: Int,
+    sidePadding: Dp,
+    height: Dp,
+    verticalPadding: Dp,
+) {
+    val travel by animateFloatAsState(
+        targetValue = current.toFloat(),
+        animationSpec = tween(durationMillis = 280, easing = Emphasized),
+        label = "indicator",
+    )
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = sidePadding, vertical = verticalPadding)
+            .height(height)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.outlineVariant),
+    ) {
         Box(
             Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 60.dp, vertical = 14.dp)
-                .height(4.dp)
+                .fillMaxWidth(1f / pages)
+                .fillMaxHeight()
+                .graphicsLayer { translationX = size.width * travel }
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.outlineVariant),
-        ) {
-            Box(
-                Modifier
-                    .fillMaxWidth(1f / pages)
-                    .fillMaxHeight()
-                    .graphicsLayer { translationX = size.width * travel }
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary)
-            )
-        }
-        return
+                .background(MaterialTheme.colorScheme.primary)
+        )
     }
-    PageDots(pages = pages, current = current)
 }
 
 @Composable
@@ -574,7 +709,11 @@ private fun PageDots(pages: Int, current: Int) {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun SearchPill(onClick: () -> Unit) {
+private fun SearchPill(
+    onClick: () -> Unit,
+    onVoice: (() -> Unit)?,
+    onApps: () -> Unit,
+) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         shape = CircleShape,
@@ -605,18 +744,21 @@ private fun SearchPill(onClick: () -> Unit) {
                     .weight(1f)
                     .padding(start = 12.dp),
             )
-            Icon(
-                Icons.Rounded.Mic,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(21.dp),
-            )
-            Spacer(Modifier.width(14.dp))
-            Icon(
-                Icons.Rounded.Apps,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(21.dp),
+            // У каждой иконки своя область нажатия: раньше они были нарисованы
+            // поверх пилюли и не делали ничего, хотя выглядели кнопками.
+            // Микрофон скрываем совсем, если слушать некому — мёртвая кнопка
+            // хуже её отсутствия.
+            onVoice?.let { voice ->
+                PillAction(
+                    icon = Icons.Rounded.Mic,
+                    description = stringResource(R.string.voice_search),
+                    onClick = voice,
+                )
+            }
+            PillAction(
+                icon = Icons.Rounded.Apps,
+                description = stringResource(R.string.folders_overview),
+                onClick = onApps,
             )
         }
     }
@@ -704,3 +846,35 @@ private fun HiddenPage(
         }
     }
 }
+
+/** Кнопка внутри поисковой пилюли: круглая область под палец, а не картинка. */
+@Composable
+private fun PillAction(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    description: String,
+    onClick: () -> Unit,
+) {
+    val haptics = rememberHaptics()
+    Box(
+        Modifier
+            .size(44.dp)
+            .clip(CircleShape)
+            .clickable {
+                haptics.tick()
+                onClick()
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            icon,
+            contentDescription = description,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(21.dp),
+        )
+    }
+}
+
+/** Все виды индикатора для снимка: так их проще сравнивать глазами. */
+@Composable
+fun IndicatorPreviewRow(style: String, pages: Int = 4, current: Int = 1) =
+    PageIndicator(style = style, pages = pages, current = current)

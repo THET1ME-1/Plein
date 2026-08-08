@@ -45,6 +45,7 @@ import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Label
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Search
@@ -116,6 +117,7 @@ fun SettingsScreen(
     var draft by remember { mutableStateOf("") }
     var choosingWallpaper by remember { mutableStateOf(false) }
     var pickingWeb by remember { mutableStateOf(false) }
+    var pickingIndicator by remember { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
     val installed by repository.apps.collectAsState()
 
@@ -294,6 +296,21 @@ fun SettingsScreen(
                             modifier = Modifier.padding(top = 10.dp),
                         )
                     }
+                    SettingsPanel(title = stringResource(R.string.row_height), place = RowPlace.Middle) {
+                        SegmentedPill(
+                            values = listOf(84, 96, 110, 124),
+                            selected = prefs.rowHeight,
+                            onSelect = { prefs.updateRowHeight(it) },
+                            content = { value, active ->
+                                Text(
+                                    text = value.toString(),
+                                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp),
+                                    color = if (active) MaterialTheme.colorScheme.onPrimary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            },
+                        )
+                    }
                     SettingsToggleRow(
                         icon = Icons.Rounded.Label,
                         title = stringResource(R.string.labels),
@@ -373,30 +390,13 @@ fun SettingsScreen(
                         place = RowPlace.Middle,
                         onClick = { pickingWeatherApp = true },
                     )
-                    SettingsPanel(title = stringResource(R.string.page_indicator), place = RowPlace.Middle) {
-                        SegmentedPill(
-                            values = listOf("dots", "bar", "numbers", "none"),
-                            selected = prefs.pageIndicator,
-                            onSelect = { prefs.updatePageIndicator(it) },
-                            content = { value, active ->
-                                Text(
-                                    text = stringResource(
-                                        when (value) {
-                                            "bar" -> R.string.indicator_bar
-                                            "numbers" -> R.string.indicator_numbers
-                                            "none" -> R.string.indicator_none
-                                            else -> R.string.indicator_dots
-                                        }
-                                    ),
-                                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp),
-                                    color = if (active) MaterialTheme.colorScheme.onPrimary
-                                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            },
-                        )
-                    }
+                    SettingsRow(
+                        icon = Icons.Rounded.MoreHoriz,
+                        title = stringResource(R.string.page_indicator),
+                        subtitle = stringResource(indicatorTitle(prefs.pageIndicator)),
+                        place = RowPlace.Middle,
+                        onClick = { pickingIndicator = true },
+                    )
                     SettingsRow(
                         icon = Icons.Rounded.FormatSize,
                         title = stringResource(R.string.clock),
@@ -750,6 +750,16 @@ fun SettingsScreen(
         )
     }
 
+    if (pickingIndicator) {
+        ChoiceSheet(
+            title = stringResource(R.string.page_indicator),
+            options = INDICATORS.map { it to stringResource(indicatorTitle(it)) },
+            selected = prefs.pageIndicator,
+            onPick = { prefs.updatePageIndicator(it) },
+            onDismiss = { pickingIndicator = false },
+        )
+    }
+
     if (pickingWeb) {
         ChoiceSheet(
             title = stringResource(R.string.web_provider),
@@ -1030,3 +1040,47 @@ fun ShapesPreviewPanel() {
         }
     }
 }
+
+/** Виды индикатора страниц в том порядке, в каком их листает человек. */
+private val INDICATORS = listOf("dots", "bar", "wide", "edge", "segments", "numbers", "none")
+
+private fun indicatorTitle(style: String): Int = when (style) {
+    "bar" -> R.string.indicator_bar
+    "wide" -> R.string.indicator_wide
+    "edge" -> R.string.indicator_edge
+    "segments" -> R.string.indicator_segments
+    "numbers" -> R.string.indicator_numbers
+    "none" -> R.string.indicator_none
+    else -> R.string.indicator_dots
+}
+
+/** Те же листы, но доступные с домашнего экрана: выбор и ввод имени. */
+@Composable
+fun ChoiceSheetPublic(
+    title: String,
+    options: List<Pair<String, String>>,
+    selected: String,
+    onPick: (String) -> Unit,
+    onDismiss: () -> Unit,
+) = ChoiceSheet(
+    title = title,
+    options = options,
+    selected = selected,
+    onPick = onPick,
+    onDismiss = onDismiss,
+)
+
+@Composable
+fun NameSheetPublic(
+    title: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) = NameSheet(
+    title = title,
+    value = value,
+    onValueChange = onValueChange,
+    onConfirm = onConfirm,
+    onDismiss = onDismiss,
+)

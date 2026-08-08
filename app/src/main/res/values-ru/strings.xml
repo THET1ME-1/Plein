@@ -210,4 +210,22 @@
     <string name="update_downloading">Качаю %1$d%%</string>
     <string name="backdrop_failed">Прошлая попытка</string>
     <string name="backdrop_wikimedia">Викисклад</string>
+    <string name="voice_search">Голосовой поиск</string>
+    <string name="voice_prompt">Говорите</string>
+    <string name="voice_missing">На телефоне нет распознавания речи</string>
+    <string name="indicator_wide">Широкая полоса</string>
+    <string name="indicator_edge">Линия по краю</string>
+    <string name="indicator_segments">Сегменты</string>
+    <string name="tiles">Плитки</string>
+    <string name="add_tile">Добавить плитку</string>
+    <string name="tile_clock">Часы</string>
+    <string name="tile_weather">Погода</string>
+    <string name="tile_battery">Батарея</string>
+    <string name="tile_calendar">Календарь</string>
+    <string name="tile_note">Заметка</string>
+    <string name="tile_remove">Убрать плитку</string>
+    <string name="tile_resize">Размер</string>
+    <string name="row_height">Высота ряда</string>
+    <string name="note_hint">Запишите</string>
+    <string name="no_events">Сегодня без событий</string>
 </resources>

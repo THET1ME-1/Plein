@@ -197,7 +197,7 @@ fun AppsGrid(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun AppCell(
+internal fun AppCell(
     entry: AppEntry,
     repository: AppRepository,
     iconSize: Dp,
@@ -275,3 +275,30 @@ private fun AppCell(
         }
     }
 }
+
+/** Та же ячейка приложения, но для страницы с плитками. */
+@Composable
+fun AppCellItem(
+    entry: AppEntry,
+    repository: AppRepository,
+    iconSize: Dp,
+    iconShape: app.plein.ui.icons.IconShape,
+    iconPack: String,
+    monoMode: app.plein.data.MonoMode,
+    showLabel: Boolean,
+    interactive: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+) = AppCell(
+    entry = entry,
+    repository = repository,
+    iconSize = iconSize,
+    iconShape = iconShape,
+    iconPack = iconPack,
+    monoMode = monoMode,
+    showLabel = showLabel,
+    wobbling = false,
+    interactive = interactive,
+    onClick = onClick,
+    onLongClick = onLongClick,
+)

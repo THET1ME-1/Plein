@@ -210,4 +210,22 @@
     <string name="update_downloading">A descarregar %1$d%%</string>
     <string name="backdrop_failed">Última tentativa</string>
     <string name="backdrop_wikimedia">Wikimedia</string>
+    <string name="voice_search">Pesquisa por voz</string>
+    <string name="voice_prompt">Fale</string>
+    <string name="voice_missing">Este telefone não reconhece voz</string>
+    <string name="indicator_wide">Barra larga</string>
+    <string name="indicator_edge">Linha na borda</string>
+    <string name="indicator_segments">Segmentos</string>
+    <string name="tiles">Mosaicos</string>
+    <string name="add_tile">Adicionar mosaico</string>
+    <string name="tile_clock">Relógio</string>
+    <string name="tile_weather">Tempo</string>
+    <string name="tile_battery">Bateria</string>
+    <string name="tile_calendar">Calendário</string>
+    <string name="tile_note">Nota</string>
+    <string name="tile_remove">Remover mosaico</string>
+    <string name="tile_resize">Tamanho</string>
+    <string name="row_height">Altura da linha</string>
+    <string name="note_hint">Anote</string>
+    <string name="no_events">Hoje sem eventos</string>
 </resources>

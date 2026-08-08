@@ -210,4 +210,22 @@
     <string name="update_downloading">Завантажую %1$d%%</string>
     <string name="backdrop_failed">Минула спроба</string>
     <string name="backdrop_wikimedia">Викисклад</string>
+    <string name="voice_search">Голосовий пошук</string>
+    <string name="voice_prompt">Говоріть</string>
+    <string name="voice_missing">На телефоні немає розпізнавання мови</string>
+    <string name="indicator_wide">Широка смуга</string>
+    <string name="indicator_edge">Лінія по краю</string>
+    <string name="indicator_segments">Сегменти</string>
+    <string name="tiles">Плитки</string>
+    <string name="add_tile">Додати плитку</string>
+    <string name="tile_clock">Годинник</string>
+    <string name="tile_weather">Погода</string>
+    <string name="tile_battery">Батарея</string>
+    <string name="tile_calendar">Календар</string>
+    <string name="tile_note">Нотатка</string>
+    <string name="tile_remove">Прибрати плитку</string>
+    <string name="tile_resize">Розмір</string>
+    <string name="row_height">Висота ряду</string>
+    <string name="note_hint">Запишіть</string>
+    <string name="no_events">Сьогодні без подій</string>
 </resources>

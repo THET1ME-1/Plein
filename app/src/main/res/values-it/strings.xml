@@ -210,4 +210,22 @@
     <string name="update_downloading">Scarico %1$d%%</string>
     <string name="backdrop_failed">Ultimo tentativo</string>
     <string name="backdrop_wikimedia">Wikimedia</string>
+    <string name="voice_search">Ricerca vocale</string>
+    <string name="voice_prompt">Parla</string>
+    <string name="voice_missing">Nessun riconoscimento vocale su questo telefono</string>
+    <string name="indicator_wide">Barra larga</string>
+    <string name="indicator_edge">Linea al bordo</string>
+    <string name="indicator_segments">Segmenti</string>
+    <string name="tiles">Riquadri</string>
+    <string name="add_tile">Aggiungi riquadro</string>
+    <string name="tile_clock">Orologio</string>
+    <string name="tile_weather">Meteo</string>
+    <string name="tile_battery">Batteria</string>
+    <string name="tile_calendar">Calendario</string>
+    <string name="tile_note">Nota</string>
+    <string name="tile_remove">Togli il riquadro</string>
+    <string name="tile_resize">Dimensione</string>
+    <string name="row_height">Altezza riga</string>
+    <string name="note_hint">Scrivilo</string>
+    <string name="no_events">Oggi niente</string>
 </resources>

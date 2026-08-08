@@ -358,6 +358,24 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                 loadBackdrop()
             }
 
+            // Папка под копии: права держим постоянными, иначе после
+            // перезагрузки лаунчер потеряет доступ к своему же архиву.
+            val backupFolderLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.OpenDocumentTree()
+            ) { uri ->
+                if (uri == null) return@rememberLauncherForActivityResult
+                runCatching {
+                    contentResolver.takePersistableUriPermission(
+                        uri,
+                        android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                            android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+                    )
+                }
+                prefs.updateBackupFolder(uri.toString())
+                prefs.updateAutoBackup(true)
+                haptics.confirm()
+            }
+
             val exportLauncher = rememberLauncherForActivityResult(
                 ActivityResultContracts.CreateDocument("application/json")
             ) { uri ->
@@ -423,6 +441,19 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
             }
 
             LaunchedEffect(Unit) { repository.refresh() }
+
+            // Копия делается сама, когда прошла неделя. Планировщик ради одного
+            // файла в неделю — лишняя работа: лаунчер и так открывают часто.
+            LaunchedEffect(prefs.autoBackup, prefs.backupFolder) {
+                if (!app.plein.data.AutoBackup.due(prefs)) return@LaunchedEffect
+                delay(3000)
+                if (app.plein.data.AutoBackup.run(context, prefs)) {
+                    android.widget.Toast.makeText(
+                        context, getString(R.string.backup_auto_done),
+                        android.widget.Toast.LENGTH_SHORT,
+                    ).show()
+                }
+            }
             LaunchedEffect(apps) { folderStore.seedIfEmpty(apps) }
 
             val density = LocalDensity.current
@@ -713,6 +744,7 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                             )
                         },
                         onPickFolder = { folderLauncher.launch(null) },
+                        onPickBackupFolder = { backupFolderLauncher.launch(null) },
                         selfUpdating = selfUpdating,
                         updateState = updateState,
                         onCheckUpdates = {

@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.roborazzi)
+    alias(libs.plugins.baselineprofile)
 }
 
 // Ключ и пароли живут вне репозитория: ~/keys/plein.properties
@@ -22,8 +23,8 @@ android {
         applicationId = "app.plein"
         minSdk = 26
         targetSdk = 37
-        versionCode = 13
-        versionName = "0.4.3"
+        versionCode = 14
+        versionName = "0.5.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -133,6 +134,8 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
 
     // Снимки экрана считаются на JVM: эмулятор для проверки не нужен.
+    baselineProfile(project(":baselineprofile"))
+
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
     testImplementation(libs.roborazzi)

@@ -1,0 +1,65 @@
+# Baseline profile лаунчера.
+#
+# Список кода, который Android переводит в машинный заранее, при установке.
+# Без него первый запуск и первая прокрутка идут через перевод на лету — это и
+# есть те самые «первые кадры дёргаются».
+#
+# Здесь перечислено то, что исполняется на пути «нажали Домой — увидели сетку»:
+# чтение настроек, список приложений, отрисовка значков, кадр и его палитра.
+# Библиотеки Compose приносят свои профили сами, дублировать их незачем.
+
+# Точка входа и оболочка
+HSPLapp/plein/MainActivity;-><init>()V
+HSPLapp/plein/MainActivity;->onCreate(Landroid/os/Bundle;)V
+HSPLapp/plein/MainActivity;->onStart()V
+HSPLapp/plein/MainActivity;->onNewIntent(Landroid/content/Intent;)V
+
+# Настройки читаются до первого кадра
+HSPLapp/plein/data/Prefs;-><init>(Landroid/content/Context;)V
+HSPLapp/plein/data/Prefs;->**(**)**
+
+# Список приложений и значки — самая горячая часть старта
+HSPLapp/plein/data/AppRepository;-><init>(Landroid/content/Context;)V
+HSPLapp/plein/data/AppRepository;->**(**)**
+HSPLapp/plein/data/IconDiskCache;->**(**)**
+HSPLapp/plein/data/MonoIcons;->**(**)**
+HSPLapp/plein/data/AppEntry;->**(**)**
+
+# Папки и раскладка страницы
+HSPLapp/plein/data/FolderStore;->**(**)**
+HSPLapp/plein/data/CellLayout;->**(**)**
+HSPLapp/plein/data/LayoutStore;->**(**)**
+
+# Кадр, его декодирование и палитра
+HSPLapp/plein/data/BackdropDecoder;->**(**)**
+HSPLapp/plein/data/PhotoPalette;->**(**)**
+HSPLapp/plein/data/Backdrops;->**(**)**
+
+# Отрисовка домашнего экрана
+HSPLapp/plein/ui/home/HomeScreenKt;->**(**)**
+HSPLapp/plein/ui/home/AppsGridKt;->**(**)**
+HSPLapp/plein/ui/home/AppIconKt;->**(**)**
+HSPLapp/plein/ui/home/BackdropKt;->**(**)**
+HSPLapp/plein/ui/home/CellGridKt;->**(**)**
+HSPLapp/plein/ui/home/TilePageKt;->**(**)**
+HSPLapp/plein/ui/icons/IconShapes;->**(**)**
+HSPLapp/plein/ui/icons/IconShape;->**(**)**
+
+# Тема и токены
+HSPLapp/plein/ui/theme/ThemeKt;->**(**)**
+HSPLapp/plein/ui/theme/TypeKt;->**(**)**
+HSPLapp/plein/ui/theme/MotionKt;->**(**)**
+
+# Классы целиком: их загрузка тоже стоит времени
+Lapp/plein/MainActivity;
+Lapp/plein/data/Prefs;
+Lapp/plein/data/AppRepository;
+Lapp/plein/data/AppEntry;
+Lapp/plein/data/FolderStore;
+Lapp/plein/data/FolderConfig;
+Lapp/plein/data/CellLayout;
+Lapp/plein/data/Cell;
+Lapp/plein/data/IconDiskCache;
+Lapp/plein/data/BackdropDecoder;
+Lapp/plein/data/PhotoPalette;
+Lapp/plein/ui/icons/IconShape;

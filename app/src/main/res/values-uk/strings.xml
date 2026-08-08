@@ -233,4 +233,11 @@
     <string name="add_widget">Додати віджет</string>
     <string name="widgets">Віджети</string>
     <string name="widget_failed">Віджет не вдалося прив\'язати</string>
+    <string name="auto_backup">Копія раз на тиждень</string>
+    <string name="auto_backup_hint">У теку, яку виберете</string>
+    <string name="backup_folder">Тека для копій</string>
+    <string name="backup_folder_none">Поки не вибрана</string>
+    <string name="backup_auto_done">Тижневу копію записано</string>
+    <string name="stacks">Стоси застосунків</string>
+    <string name="stacks_hint">Рідкісні застосунки в одній клітинці</string>
 </resources>

@@ -102,6 +102,7 @@ fun SettingsScreen(
     backdropFailure: String? = null,
     onPickPhotos: () -> Unit,
     onPickFolder: () -> Unit,
+    onPickBackupFolder: () -> Unit,
     onSetWallpaper: (app.plein.data.WallpaperTarget) -> Unit,
     selfUpdating: Boolean,
     updateState: String,
@@ -651,6 +652,22 @@ fun SettingsScreen(
                         subtitle = stringResource(R.string.backup_export_hint),
                         place = RowPlace.First,
                         onClick = onExportBackup,
+                    )
+                    SettingsToggleRow(
+                        icon = Icons.Rounded.Schedule,
+                        title = stringResource(R.string.auto_backup),
+                        subtitle = stringResource(R.string.auto_backup_hint),
+                        checked = prefs.autoBackup,
+                        place = RowPlace.Middle,
+                        onCheckedChange = { prefs.updateAutoBackup(it) },
+                    )
+                    SettingsRow(
+                        icon = Icons.Rounded.Folder,
+                        title = stringResource(R.string.backup_folder),
+                        subtitle = prefs.backupFolder.substringAfterLast('/')
+                            .ifEmpty { stringResource(R.string.backup_folder_none) },
+                        place = RowPlace.Middle,
+                        onClick = onPickBackupFolder,
                     )
                     SettingsRow(
                         icon = Icons.Rounded.Download,

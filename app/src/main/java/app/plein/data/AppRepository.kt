@@ -180,7 +180,7 @@ class AppRepository(private val context: Context) {
             info?.getIcon(context.resources.displayMetrics.densityDpi)
         }.getOrNull() ?: return@withContext null
 
-        val rendered = mono?.let { renderMono(drawable, sizePx, shapePath, it) }
+        val rendered = mono?.let { renderMono(drawable, sizePx, shapePath, it, fromPack != null) }
             ?: renderIcon(drawable, sizePx, shapePath)
         diskCache.write(packageName, cacheKey, rendered)
         val bitmap = rendered.asImageBitmap()
@@ -229,11 +229,16 @@ class AppRepository(private val context: Context) {
         sizePx: Int,
         shapePath: android.graphics.Path?,
         style: MonoStyle,
+        fromPack: Boolean,
     ): Bitmap {
-        val layer = MonoIcons.layerOf(drawable)
+        val layer = if (style.mode == MonoMode.Off) null else MonoIcons.layerOf(drawable)
+        val flat = if (layer != null || !fromPack) null else renderIcon(drawable, sizePx, null)
         val mask = when {
             layer != null -> drawLayer(layer, sizePx)
-            style.mode == MonoMode.Always -> MonoIcons.silhouette(renderIcon(drawable, sizePx, null))
+            // Пак линейных значков (Arcticons и подобные) уже одноцветный:
+            // красим по форме, а не по свету — иначе линии пропадают.
+            flat != null && MonoIcons.isFlat(flat) -> MonoIcons.alphaMask(flat)
+            style.mode == MonoMode.Always -> MonoIcons.silhouette(flat ?: renderIcon(drawable, sizePx, null))
             else -> return renderIcon(drawable, sizePx, shapePath)
         }
 
@@ -298,7 +303,11 @@ class AppRepository(private val context: Context) {
         diskCache.trim()
     }
 
+    /** Кто и когда открывается: этим потом сортируется поиск. */
+    val stats = LaunchStats(context)
+
     fun launch(entry: AppEntry) {
+        stats.remember(entry.key)
         runCatching { launcherApps.startMainActivity(entry.component, entry.user, null, null) }
     }
 

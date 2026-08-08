@@ -121,6 +121,39 @@ class Prefs(context: Context) {
         sp.edit().putBoolean(KEY_G_PINCH, value).apply()
     }
 
+    /** Копия сама раз в неделю. */
+    var autoBackup by mutableStateOf(sp.getBoolean(KEY_AUTO_BACKUP, false))
+        private set
+
+    fun updateAutoBackup(value: Boolean) {
+        autoBackup = value
+        sp.edit().putBoolean(KEY_AUTO_BACKUP, value).apply()
+    }
+
+    /** Папка, куда кладём копии. */
+    var backupFolder by mutableStateOf(sp.getString(KEY_BACKUP_FOLDER, null).orEmpty())
+        private set
+
+    fun updateBackupFolder(value: String) {
+        backupFolder = value
+        sp.edit().putString(KEY_BACKUP_FOLDER, value).apply()
+    }
+
+    var lastBackup: Long
+        get() = sp.getLong(KEY_LAST_BACKUP, 0L)
+        set(value) {
+            sp.edit().putLong(KEY_LAST_BACKUP, value).apply()
+        }
+
+    /** Стопки: редкие приложения складываются в одну клетку. По умолчанию нет. */
+    var stacksEnabled by mutableStateOf(sp.getBoolean(KEY_STACKS, false))
+        private set
+
+    fun updateStacksEnabled(value: Boolean) {
+        stacksEnabled = value
+        sp.edit().putBoolean(KEY_STACKS, value).apply()
+    }
+
     /** Текст плитки-заметки. */
     var noteText by mutableStateOf(sp.getString(KEY_NOTE, null).orEmpty())
         private set
@@ -387,6 +420,10 @@ class Prefs(context: Context) {
         const val KEY_MONO = "mono_icons"
         const val KEY_WEB = "web_provider"
         const val KEY_NOTE = "note_text"
+        const val KEY_AUTO_BACKUP = "auto_backup"
+        const val KEY_BACKUP_FOLDER = "backup_folder"
+        const val KEY_LAST_BACKUP = "last_backup"
+        const val KEY_STACKS = "stacks"
         const val KEY_ROW_HEIGHT = "row_height"
         const val KEY_G_LOCK = "gesture_lock"
         const val KEY_G_SHADE = "gesture_shade"

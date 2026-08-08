@@ -233,4 +233,11 @@
     <string name="add_widget">Add a widget</string>
     <string name="widgets">Widgets</string>
     <string name="widget_failed">Widget could not be bound</string>
+    <string name="auto_backup">Copy itself weekly</string>
+    <string name="auto_backup_hint">Into a folder you pick</string>
+    <string name="backup_folder">Folder for copies</string>
+    <string name="backup_folder_none">Not picked yet</string>
+    <string name="backup_auto_done">Weekly copy saved</string>
+    <string name="stacks">Stacks of apps</string>
+    <string name="stacks_hint">Rare apps share one cell</string>
 </resources>

@@ -56,6 +56,7 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Velocity
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -277,7 +278,11 @@ fun HomeScreen(
         if (reached) haptics.threshold()
     }
 
-    val columns = prefs.columns
+    // Сетка идёт от ширины экрана: на планшете и раскрытой раскладушке
+    // телефонные четыре колонки растягиваются до неприличия.
+    val screenWidthDp = LocalConfiguration.current.screenWidthDp
+    val columns = Adaptive.columnsFor(screenWidthDp, prefs.columns)
+    val sheetPadding = Adaptive.sheetPadding(screenWidthDp)
     val iconSize = iconSizeFor(columns)
     val iconShape = prefs.iconShape
     val iconPack = prefs.iconPack
@@ -340,6 +345,7 @@ fun HomeScreen(
                 shape = RoundedCornerShape(topStart = SheetCorner, topEnd = SheetCorner),
                 modifier = Modifier
                     .fillMaxWidth()
+                    .padding(horizontal = sheetPadding)
                     .weight(1f)
                     // Жесты слушаем на самом листе и до сетки: значки съедают
                     // касание, а лист остаётся свободным по краям и между рядов.

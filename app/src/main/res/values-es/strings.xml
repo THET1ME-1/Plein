@@ -233,4 +233,11 @@
     <string name="add_widget">Añadir widget</string>
     <string name="widgets">Widgets</string>
     <string name="widget_failed">No se pudo vincular el widget</string>
+    <string name="auto_backup">Copia cada semana</string>
+    <string name="auto_backup_hint">En una carpeta que elijas</string>
+    <string name="backup_folder">Carpeta de copias</string>
+    <string name="backup_folder_none">Aún sin elegir</string>
+    <string name="backup_auto_done">Copia semanal guardada</string>
+    <string name="stacks">Pilas de aplicaciones</string>
+    <string name="stacks_hint">Las apps raras comparten celda</string>
 </resources>

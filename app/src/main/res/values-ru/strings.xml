@@ -233,4 +233,11 @@
     <string name="add_widget">Добавить виджет</string>
     <string name="widgets">Виджеты</string>
     <string name="widget_failed">Виджет не удалось привязать</string>
+    <string name="auto_backup">Копия раз в неделю</string>
+    <string name="auto_backup_hint">В папку, которую выберете</string>
+    <string name="backup_folder">Папка для копий</string>
+    <string name="backup_folder_none">Пока не выбрана</string>
+    <string name="backup_auto_done">Недельная копия записана</string>
+    <string name="stacks">Стопки приложений</string>
+    <string name="stacks_hint">Редкие приложения в одной клетке</string>
 </resources>

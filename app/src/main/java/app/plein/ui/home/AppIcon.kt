@@ -44,7 +44,9 @@ fun AppIcon(
     // Цвета монохрома берутся из темы прямо здесь: они входят в ключ кэша,
     // поэтому смена палитры сама тянет за собой перерисовку значков.
     val scheme = MaterialTheme.colorScheme
-    val mono = if (monoMode == MonoMode.Off) null else MonoStyle(
+    // Цвета отдаём всегда: даже при выключенном монохроме линейный пак нужно
+    // красить под тему, иначе он остаётся белым на любой палитре.
+    val mono = MonoStyle(
         mode = monoMode,
         tint = scheme.onSurface.toArgb(),
         background = scheme.surfaceContainerHighest.toArgb(),

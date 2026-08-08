@@ -94,6 +94,55 @@ object MonoIcons {
         return result
     }
 
+    /**
+     * Маска по прозрачности.
+     *
+     * Паки вроде Arcticons рисуют линии одним цветом на прозрачном фоне: там
+     * важна форма, а не яркость. Считать силуэт по свету для них нельзя —
+     * светлые линии посчитались бы фоном и пропали. Берём альфа-канал как
+     * есть, цвет назначим при отрисовке.
+     */
+    fun alphaMask(source: Bitmap): Bitmap {
+        val width = source.width
+        val height = source.height
+        val pixels = IntArray(width * height)
+        source.getPixels(pixels, 0, width, 0, 0, width, height)
+        pixels.forEachIndexed { index, pixel ->
+            pixels[index] = Color.argb(Color.alpha(pixel), 255, 255, 255)
+        }
+        val result = createBitmap(width, height)
+        result.setPixels(pixels, 0, width, 0, 0, width, height)
+        return result
+    }
+
+    /**
+     * Одноцветная ли картинка.
+     *
+     * У линейного пака все непрозрачные точки одного тона, у обычного значка
+     * разброс большой. По этому и отличаем: первый красим по форме, второму
+     * считаем силуэт.
+     */
+    fun isFlat(source: Bitmap): Boolean {
+        val width = source.width
+        val height = source.height
+        if (width == 0 || height == 0) return false
+        val pixels = IntArray(width * height)
+        source.getPixels(pixels, 0, width, 0, 0, width, height)
+
+        var min = 1.0
+        var max = 0.0
+        var counted = 0
+        pixels.forEach { pixel ->
+            if (Color.alpha(pixel) < 40) return@forEach
+            val value = luma(pixel)
+            if (value < min) min = value
+            if (value > max) max = value
+            counted++
+        }
+        if (counted < 16) return false
+        return max - min < 0.25
+    }
+
     /** Рисунок одним цветом на своей подложке. */
     fun paint(mask: Bitmap, sizePx: Int, tint: Int, background: Int): Bitmap {
         val output = createBitmap(sizePx, sizePx)

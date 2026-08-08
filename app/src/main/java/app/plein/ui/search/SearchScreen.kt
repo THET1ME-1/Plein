@@ -87,9 +87,25 @@ fun SearchScreen(
 
     LaunchedEffect(Unit) { focus.requestFocus() }
 
+    // Порядок держит AppRanker: совпадение по буквам плюс привычка. Пустой
+    // запрос показывает то, что открывают в этот час чаще всего.
+    val stats = repository.stats
     val matches = remember(query, apps) {
-        if (query.isBlank()) emptyList()
-        else apps.filter { it.title.contains(query, ignoreCase = true) }.take(24)
+        val hour = stats.nowHour()
+        val total = stats.total()
+        apps.map { entry ->
+            entry to app.plein.search.AppRanker.score(
+                title = entry.title,
+                query = query,
+                launches = stats.launches(entry.key),
+                launchesAtHour = stats.launchesAt(entry.key, hour),
+                totalLaunches = total,
+            )
+        }
+            .filter { it.second > 0.0 }
+            .sortedWith(compareByDescending<Pair<AppEntry, Double>> { it.second }.thenBy { it.first.title })
+            .take(if (query.isBlank()) 8 else 24)
+            .map { it.first }
     }
     val calculated = remember(query) { Calculator.evaluate(query)?.let(Calculator::format) }
 

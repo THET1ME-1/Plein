@@ -62,4 +62,17 @@
     <string name="photo_credit">Foto: %1$s · Unsplash</string>
     <string name="uninstall">Desinstalar</string>
     <string name="uninstall_hint">Remove a app do telefone</string>
+    <string name="vibrancy_soft">Suave</string>
+    <string name="clock">Relógio</string>
+    <string name="clock_size">Tamanho do relógio</string>
+    <string name="show_date">Mostrar data</string>
+    <string name="show_weather">Mostrar meteorologia</string>
+    <string name="weather">Meteorologia</string>
+    <string name="interface_font">Tipo de letra</string>
+    <string name="font_search_hint">Pesquisar no Google Fonts</string>
+    <string name="about">Sobre</string>
+    <string name="open_source">Código aberto</string>
+    <string name="source_github">Código no GitHub</string>
+    <string name="system">Sistema</string>
+    <string name="screen">Ecrã</string>
 </resources>

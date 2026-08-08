@@ -56,6 +56,57 @@ class Prefs(context: Context) {
     var seedFromPhoto by mutableStateOf(sp.getBoolean(KEY_SEED_FROM_PHOTO, true))
         private set
 
+    // ── Часы на кадре ──
+
+    var clockSize by mutableStateOf(sp.getString(KEY_CLOCK_SIZE, null) ?: "m")
+        private set
+
+    var clockTwentyFour by mutableStateOf(sp.getBoolean(KEY_CLOCK_24, true))
+        private set
+
+    var showDate by mutableStateOf(sp.getBoolean(KEY_SHOW_DATE, true))
+        private set
+
+    var showWeather by mutableStateOf(sp.getBoolean(KEY_SHOW_WEATHER, false))
+        private set
+
+    /** Имя семейства из каталога Google Fonts. Пусто означает шрифт ДНК. */
+    var clockFont by mutableStateOf(sp.getString(KEY_CLOCK_FONT, null).orEmpty())
+        private set
+
+    var interfaceFont by mutableStateOf(sp.getString(KEY_UI_FONT, null).orEmpty())
+        private set
+
+    fun updateClockSize(value: String) {
+        clockSize = value
+        sp.edit().putString(KEY_CLOCK_SIZE, value).apply()
+    }
+
+    fun updateClockTwentyFour(value: Boolean) {
+        clockTwentyFour = value
+        sp.edit().putBoolean(KEY_CLOCK_24, value).apply()
+    }
+
+    fun updateShowDate(value: Boolean) {
+        showDate = value
+        sp.edit().putBoolean(KEY_SHOW_DATE, value).apply()
+    }
+
+    fun updateShowWeather(value: Boolean) {
+        showWeather = value
+        sp.edit().putBoolean(KEY_SHOW_WEATHER, value).apply()
+    }
+
+    fun updateClockFont(value: String) {
+        clockFont = value
+        sp.edit().putString(KEY_CLOCK_FONT, value).apply()
+    }
+
+    fun updateInterfaceFont(value: String) {
+        interfaceFont = value
+        sp.edit().putString(KEY_UI_FONT, value).apply()
+    }
+
     fun updateIconShape(value: IconShape) {
         iconShape = value
         sp.edit().putString(KEY_SHAPE, value.name).apply()
@@ -112,6 +163,12 @@ class Prefs(context: Context) {
         const val KEY_VIBRANCY = "vibrancy"
         const val KEY_SEED = "seed_color"
         const val KEY_SEED_FROM_PHOTO = "seed_from_photo"
+        const val KEY_CLOCK_SIZE = "clock_size"
+        const val KEY_CLOCK_24 = "clock_24"
+        const val KEY_SHOW_DATE = "clock_show_date"
+        const val KEY_SHOW_WEATHER = "clock_show_weather"
+        const val KEY_CLOCK_FONT = "clock_font"
+        const val KEY_UI_FONT = "ui_font"
 
         /** Амбра из Wickly: тёплая и спокойная в обеих темах. */
         const val DEFAULT_SEED = 0xFFC0863E.toInt()

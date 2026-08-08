@@ -62,4 +62,17 @@
     <string name="photo_credit">Photo: %1$s · Unsplash</string>
     <string name="uninstall">Uninstall</string>
     <string name="uninstall_hint">Removes the app from the phone</string>
+    <string name="vibrancy_soft">Soft</string>
+    <string name="clock">Clock</string>
+    <string name="clock_size">Clock size</string>
+    <string name="show_date">Show date</string>
+    <string name="show_weather">Show weather</string>
+    <string name="weather">Weather</string>
+    <string name="interface_font">Interface font</string>
+    <string name="font_search_hint">Search Google Fonts</string>
+    <string name="about">About</string>
+    <string name="open_source">Open source</string>
+    <string name="source_github">Source on GitHub</string>
+    <string name="system">System</string>
+    <string name="screen">Screen</string>
 </resources>

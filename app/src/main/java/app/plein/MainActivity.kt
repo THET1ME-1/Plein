@@ -101,6 +101,7 @@ class MainActivity : ComponentActivity() {
                 dynamicColor = prefs.dynamicColor,
                 amoled = prefs.amoled,
                 vibrancy = prefs.vibrancy,
+                interfaceFont = prefs.interfaceFont,
             ) {
                 HomeScreen(
                     folders = folderStore.folders,
@@ -147,6 +148,14 @@ class MainActivity : ComponentActivity() {
                         folders = folderStore.folders,
                         isDefaultLauncher = isDefault,
                         dark = dark,
+                        versionName = BuildConfig.VERSION_NAME,
+                        onOpenSource = {
+                            val intent = android.content.Intent(
+                                android.content.Intent.ACTION_VIEW,
+                                android.net.Uri.parse("https://github.com/THET1ME-1/Plein"),
+                            )
+                            runCatching { startActivity(intent) }
+                        },
                         onClose = { screen = Screen.Home },
                         onMakeDefault = { roleLauncher.launch(DefaultLauncher.requestIntent(context)) },
                         onCreateFolder = { folderStore.create(it) },

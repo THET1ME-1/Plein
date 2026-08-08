@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -15,29 +14,38 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Button
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.ArrowDownward
 import androidx.compose.material.icons.rounded.ArrowUpward
+import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.Cloud
+import androidx.compose.material.icons.rounded.Code
+import androidx.compose.material.icons.rounded.Contrast
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DriveFileRenameOutline
+import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.FormatSize
 import androidx.compose.material.icons.rounded.Home
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.Label
+import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.rounded.TextFields
+import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,19 +54,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.plein.R
 import app.plein.data.FolderConfig
 import app.plein.data.Prefs
 import app.plein.ui.icons.IconShape
-import androidx.compose.ui.res.stringResource
-import app.plein.R
-import app.plein.ui.theme.MonoFont
 
 /**
- * Настройки одним экраном: форма значков, сетка, папки и роль лаунчера.
- * Порядок разделов повторяет макет.
+ * Настройки.
+ *
+ * Секция это единая карточка: у крайних строк скруглены внешние углы, между
+ * строками почти прямой стык. Иконка сидит в круглом цветном чипе.
  */
 @Composable
 fun SettingsScreen(
@@ -66,18 +76,21 @@ fun SettingsScreen(
     folders: List<FolderConfig>,
     isDefaultLauncher: Boolean,
     dark: Boolean,
+    versionName: String,
     onClose: () -> Unit,
     onMakeDefault: () -> Unit,
+    onOpenSource: () -> Unit,
     onCreateFolder: (String) -> Unit,
     onRenameFolder: (String, String) -> Unit,
     onDeleteFolder: (String) -> Unit,
     onMoveFolder: (Int, Int) -> Unit,
 ) {
+    var picking by remember { mutableStateOf(false) }
+    var pickingFontFor by remember { mutableStateOf<String?>(null) }
     var allShapes by remember { mutableStateOf(false) }
     var creating by remember { mutableStateOf(false) }
     var renamingId by remember { mutableStateOf<String?>(null) }
     var draft by remember { mutableStateOf("") }
-    var picking by remember { mutableStateOf(false) }
 
     Box(
         Modifier
@@ -85,7 +98,7 @@ fun SettingsScreen(
             .background(MaterialTheme.colorScheme.surface)
     ) {
         LazyColumn(
-            contentPadding = PaddingValues(bottom = 32.dp),
+            contentPadding = PaddingValues(bottom = 40.dp),
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
@@ -94,11 +107,11 @@ fun SettingsScreen(
             item {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(start = 8.dp, end = 20.dp, top = 12.dp, bottom = 12.dp),
+                    modifier = Modifier.padding(start = 10.dp, end = 20.dp, top = 14.dp, bottom = 10.dp),
                 ) {
                     Box(
                         Modifier
-                            .size(44.dp)
+                            .size(48.dp)
                             .clip(CircleShape)
                             .clickable(onClick = onClose),
                         contentAlignment = Alignment.Center,
@@ -111,146 +124,244 @@ fun SettingsScreen(
                     }
                     Text(
                         text = stringResource(R.string.settings),
-                        style = MaterialTheme.typography.headlineSmall.copy(fontSize = 26.sp),
+                        style = MaterialTheme.typography.headlineMedium.copy(fontSize = 30.sp),
                         color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(start = 4.dp),
+                        modifier = Modifier.padding(start = 6.dp),
                     )
                 }
             }
 
             if (!isDefaultLauncher) {
                 item {
-                    Surface(
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        shape = RoundedCornerShape(26.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 6.dp)
-                            .clip(RoundedCornerShape(26.dp))
-                            .clickable(onClick = onMakeDefault),
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
-                        ) {
-                            Icon(
-                                Icons.Rounded.Home,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                            )
-                            Column(Modifier.padding(start = 14.dp)) {
-                                Text(
-                                    text = stringResource(R.string.make_default),
-                                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp),
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                )
-                                Text(
-                                    text = stringResource(R.string.make_default_hint),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f),
-                                )
-                            }
-                        }
+                    Box(Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) {
+                        SettingsRow(
+                            icon = Icons.Rounded.Home,
+                            title = stringResource(R.string.make_default),
+                            subtitle = stringResource(R.string.make_default_hint),
+                            chipTint = MaterialTheme.colorScheme.onPrimary,
+                            chipBackground = MaterialTheme.colorScheme.primary,
+                            onClick = onMakeDefault,
+                        )
                     }
                 }
             }
 
-            item { SectionLabel(stringResource(R.string.icon_shape)) }
             item {
-                val shapes = if (allShapes) IconShape.entries.toList() else IconShape.featured
-                Column {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(4),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp),
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(if (allShapes) 380.dp else 100.dp),
-                    ) {
-                        items(shapes, key = { it.name }) { option ->
-                            ShapeCell(
-                                option = option,
-                                selected = prefs.iconShape == option,
-                                onClick = { prefs.updateIconShape(option) },
-                            )
-                        }
-                    }
-                    TextButton(
-                        onClick = { allShapes = !allShapes },
-                        modifier = Modifier.padding(start = 12.dp),
-                    ) {
-                        Text(if (allShapes) "Свернуть" else "Больше форм")
-                    }
-                }
-            }
-
-            item { SectionLabel(stringResource(R.string.grid)) }
-            item {
-                SettingRow(title = stringResource(R.string.columns), subtitle = stringResource(R.string.columns_hint)) {
-                    Segments(
-                        values = listOf(3, 4, 5, 6),
-                        selected = prefs.columns,
-                        label = { it.toString() },
-                        onSelect = { prefs.updateColumns(it) },
+                SettingsSection(stringResource(R.string.appearance)) {
+                    AppearancePanel(
+                        themeMode = prefs.themeMode,
+                        amoled = prefs.amoled,
+                        vibrancy = prefs.vibrancy,
+                        seedColor = prefs.seedColor,
+                        seedFromPhoto = prefs.seedFromPhoto,
+                        dark = dark,
+                        onThemeMode = { prefs.updateThemeMode(it) },
+                        onVibrancy = { prefs.updateVibrancy(it) },
+                        onSeedColor = { prefs.updateSeedColor(it) },
+                        onPickCustomColor = { picking = true },
+                    )
+                    SettingsToggleRow(
+                        icon = Icons.Rounded.Image,
+                        title = stringResource(R.string.color_from_photo),
+                        subtitle = stringResource(R.string.color_from_photo_hint),
+                        checked = prefs.seedFromPhoto,
+                        place = RowPlace.Middle,
+                        onCheckedChange = { prefs.updateSeedFromPhoto(it) },
+                    )
+                    SettingsToggleRow(
+                        icon = Icons.Rounded.Wallpaper,
+                        title = stringResource(R.string.material_you),
+                        subtitle = stringResource(R.string.material_you_hint),
+                        checked = prefs.dynamicColor,
+                        place = RowPlace.Middle,
+                        onCheckedChange = { prefs.updateDynamicColor(it) },
+                    )
+                    SettingsToggleRow(
+                        icon = Icons.Rounded.Contrast,
+                        title = stringResource(R.string.amoled),
+                        subtitle = stringResource(R.string.amoled_hint),
+                        checked = prefs.amoled,
+                        place = RowPlace.Last,
+                        onCheckedChange = { prefs.updateAmoled(it) },
                     )
                 }
             }
+
             item {
-                SettingRow(title = stringResource(R.string.labels), subtitle = stringResource(R.string.labels_hint)) {
-                    Switch(checked = prefs.showLabels, onCheckedChange = { prefs.updateShowLabels(it) })
+                SettingsSection(stringResource(R.string.screen)) {
+                    SettingsPanel(title = stringResource(R.string.columns), place = RowPlace.First) {
+                        SegmentedPill(
+                            values = listOf(3, 4, 5, 6),
+                            selected = prefs.columns,
+                            onSelect = { prefs.updateColumns(it) },
+                            content = { value, active ->
+                                Text(
+                                    text = value.toString(),
+                                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp),
+                                    color = if (active) MaterialTheme.colorScheme.onPrimary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            },
+                        )
+                    }
+                    SettingsPanel(title = stringResource(R.string.icon_shape), place = RowPlace.Middle) {
+                        val shapes = if (allShapes) IconShape.entries.toList() else IconShape.featured
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(4),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            userScrollEnabled = false,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(if (allShapes) 430.dp else 110.dp),
+                        ) {
+                            items(shapes, key = { it.name }) { option ->
+                                ShapeCell(
+                                    option = option,
+                                    selected = prefs.iconShape == option,
+                                    onClick = { prefs.updateIconShape(option) },
+                                )
+                            }
+                        }
+                        Text(
+                            text = stringResource(if (allShapes) R.string.collapse else R.string.more_shapes),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .padding(top = 12.dp)
+                                .clip(CircleShape)
+                                .clickable { allShapes = !allShapes }
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                        )
+                    }
+                    SettingsToggleRow(
+                        icon = Icons.Rounded.Label,
+                        title = stringResource(R.string.labels),
+                        subtitle = stringResource(R.string.labels_hint),
+                        checked = prefs.showLabels,
+                        place = RowPlace.Last,
+                        onCheckedChange = { prefs.updateShowLabels(it) },
+                    )
                 }
             }
 
-            item { SectionLabel(stringResource(R.string.appearance)) }
             item {
-                AppearanceSection(
-                    themeMode = prefs.themeMode,
-                    amoled = prefs.amoled,
-                    dynamicColor = prefs.dynamicColor,
-                    vibrancy = prefs.vibrancy,
-                    seedColor = prefs.seedColor,
-                    seedFromPhoto = prefs.seedFromPhoto,
-                    dark = dark,
-                    onThemeMode = { prefs.updateThemeMode(it) },
-                    onAmoled = { prefs.updateAmoled(it) },
-                    onDynamicColor = { prefs.updateDynamicColor(it) },
-                    onVibrancy = { prefs.updateVibrancy(it) },
-                    onSeedColor = { prefs.updateSeedColor(it) },
-                    onSeedFromPhoto = { prefs.updateSeedFromPhoto(it) },
-                    onPickCustomColor = { picking = true },
-                )
-            }
-
-            item { SectionLabel(stringResource(R.string.folders)) }
-            itemsIndexedFolders(
-                folders = folders,
-                onRename = { id, title -> renamingId = id; draft = title },
-                onDelete = onDeleteFolder,
-                onMove = onMoveFolder,
-            )
-            item {
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    shape = RoundedCornerShape(22.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 3.dp)
-                        .clip(RoundedCornerShape(22.dp))
-                        .clickable { creating = true; draft = "" },
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
-                    ) {
-                        Icon(Icons.Rounded.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        Text(
-                            text = stringResource(R.string.new_folder),
-                            style = MaterialTheme.typography.bodyLarge.copy(fontSize = 14.5.sp),
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(start = 14.dp),
+                SettingsSection(stringResource(R.string.clock)) {
+                    SettingsPanel(title = stringResource(R.string.clock_size), place = RowPlace.First) {
+                        SegmentedPill(
+                            values = listOf("s", "m", "l", "xl"),
+                            selected = prefs.clockSize,
+                            onSelect = { prefs.updateClockSize(it) },
+                            content = { value, active ->
+                                Text(
+                                    text = value.uppercase(),
+                                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp),
+                                    color = if (active) MaterialTheme.colorScheme.onPrimary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            },
                         )
                     }
+                    SettingsToggleRow(
+                        icon = Icons.Rounded.Schedule,
+                        title = "24",
+                        subtitle = if (prefs.clockTwentyFour) "13:45" else "1:45 PM",
+                        checked = prefs.clockTwentyFour,
+                        place = RowPlace.Middle,
+                        onCheckedChange = { prefs.updateClockTwentyFour(it) },
+                    )
+                    SettingsToggleRow(
+                        icon = Icons.Rounded.CalendarMonth,
+                        title = stringResource(R.string.show_date),
+                        checked = prefs.showDate,
+                        place = RowPlace.Middle,
+                        onCheckedChange = { prefs.updateShowDate(it) },
+                    )
+                    SettingsToggleRow(
+                        icon = Icons.Rounded.Cloud,
+                        title = stringResource(R.string.show_weather),
+                        subtitle = stringResource(R.string.weather),
+                        checked = prefs.showWeather,
+                        place = RowPlace.Middle,
+                        onCheckedChange = { prefs.updateShowWeather(it) },
+                    )
+                    SettingsRow(
+                        icon = Icons.Rounded.FormatSize,
+                        title = stringResource(R.string.clock),
+                        subtitle = prefs.clockFont.ifEmpty { "Unbounded" },
+                        place = RowPlace.Last,
+                        onClick = { pickingFontFor = "clock" },
+                    )
+                }
+            }
+
+            item {
+                SettingsSection(stringResource(R.string.interface_font)) {
+                    SettingsRow(
+                        icon = Icons.Rounded.TextFields,
+                        title = stringResource(R.string.interface_font),
+                        subtitle = prefs.interfaceFont.ifEmpty { "Onest · " + stringResource(R.string.font_search_hint) },
+                        onClick = { pickingFontFor = "ui" },
+                    )
+                }
+            }
+
+            item {
+                SettingsSection(stringResource(R.string.folders)) {
+                    folders.forEachIndexed { index, folder ->
+                        SettingsRow(
+                            icon = Icons.Rounded.Folder,
+                            title = if (folder.isAll) stringResource(R.string.all_apps) else folder.title,
+                            subtitle = if (folder.isAll) stringResource(R.string.all_installed)
+                            else stringResource(R.string.apps_count, folder.appKeys.size),
+                            place = if (index == 0) RowPlace.First else RowPlace.Middle,
+                            trailing = {
+                                Row {
+                                    IconAction(Icons.Rounded.ArrowUpward, stringResource(R.string.move_up)) {
+                                        onMoveFolder(index, index - 1)
+                                    }
+                                    IconAction(Icons.Rounded.ArrowDownward, stringResource(R.string.move_down)) {
+                                        onMoveFolder(index, index + 1)
+                                    }
+                                    if (!folder.isAll) {
+                                        IconAction(Icons.Rounded.DriveFileRenameOutline, stringResource(R.string.rename)) {
+                                            renamingId = folder.id
+                                            draft = folder.title
+                                        }
+                                        IconAction(Icons.Rounded.Delete, stringResource(R.string.delete), danger = true) {
+                                            onDeleteFolder(folder.id)
+                                        }
+                                    }
+                                }
+                            },
+                        )
+                    }
+                    SettingsRow(
+                        icon = Icons.Rounded.Add,
+                        title = stringResource(R.string.new_folder),
+                        place = RowPlace.Last,
+                        chipTint = MaterialTheme.colorScheme.onTertiaryContainer,
+                        chipBackground = MaterialTheme.colorScheme.tertiaryContainer,
+                        onClick = { creating = true; draft = "" },
+                    )
+                }
+            }
+
+            item {
+                SettingsSection(stringResource(R.string.about)) {
+                    SettingsRow(
+                        icon = Icons.Rounded.Code,
+                        title = stringResource(R.string.open_source),
+                        subtitle = "Plein $versionName · GPL-3.0",
+                        place = RowPlace.First,
+                    )
+                    SettingsRow(
+                        icon = Icons.Rounded.Link,
+                        title = stringResource(R.string.source_github),
+                        subtitle = "github.com/THET1ME-1/Plein",
+                        place = RowPlace.Last,
+                        onClick = onOpenSource,
+                    )
                 }
             }
         }
@@ -260,6 +371,16 @@ fun SettingsScreen(
         ColorPickerSheet(
             onPick = { prefs.updateSeedColor(it) },
             onDismiss = { picking = false },
+        )
+    }
+
+    pickingFontFor?.let { target ->
+        FontPickerSheet(
+            current = if (target == "clock") prefs.clockFont else prefs.interfaceFont,
+            onPick = { family ->
+                if (target == "clock") prefs.updateClockFont(family) else prefs.updateInterfaceFont(family)
+            },
+            onDismiss = { pickingFontFor = null },
         )
     }
 
@@ -279,56 +400,9 @@ fun SettingsScreen(
     }
 }
 
-private fun androidx.compose.foundation.lazy.LazyListScope.itemsIndexedFolders(
-    folders: List<FolderConfig>,
-    onRename: (String, String) -> Unit,
-    onDelete: (String) -> Unit,
-    onMove: (Int, Int) -> Unit,
-) {
-    items(folders.size, key = { folders[it].id }) { index ->
-        val folder = folders[index]
-        Surface(
-            color = MaterialTheme.colorScheme.surfaceContainer,
-            shape = RoundedCornerShape(22.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 3.dp),
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(start = 18.dp, end = 6.dp, top = 8.dp, bottom = 8.dp),
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        text = if (folder.isAll) stringResource(R.string.all_apps) else folder.title,
-                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = 14.5.sp),
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = if (folder.isAll) "Все установленные" else stringResource(R.string.apps_count, folder.appKeys.size),
-                        fontFamily = MonoFont,
-                        fontSize = 10.5.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                IconAction(Icons.Rounded.ArrowUpward, stringResource(R.string.move_up)) { onMove(index, index - 1) }
-                IconAction(Icons.Rounded.ArrowDownward, stringResource(R.string.move_down)) { onMove(index, index + 1) }
-                if (!folder.isAll) {
-                    IconAction(Icons.Rounded.DriveFileRenameOutline, stringResource(R.string.rename)) {
-                        onRename(folder.id, folder.title)
-                    }
-                    IconAction(Icons.Rounded.Delete, stringResource(R.string.delete), danger = true) { onDelete(folder.id) }
-                }
-            }
-        }
-    }
-}
-
 @Composable
 private fun IconAction(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     description: String,
     danger: Boolean = false,
     onClick: () -> Unit,
@@ -357,7 +431,7 @@ private fun ShapeCell(option: IconShape, selected: Boolean, onClick: () -> Unit)
     ) {
         Box(
             Modifier
-                .size(56.dp)
+                .size(58.dp)
                 .clip(option.shape())
                 .background(
                     if (selected) MaterialTheme.colorScheme.primary
@@ -376,85 +450,6 @@ private fun ShapeCell(option: IconShape, selected: Boolean, onClick: () -> Unit)
         )
     }
 }
-
-@Composable
-private fun SectionLabel(text: String) {
-    Text(
-        text = text.uppercase(),
-        fontFamily = MonoFont,
-        fontSize = 10.sp,
-        letterSpacing = 1.6.sp,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(start = 22.dp, top = 18.dp, bottom = 8.dp),
-    )
-}
-
-@Composable
-private fun SettingRow(
-    title: String,
-    subtitle: String,
-    trailing: @Composable () -> Unit,
-) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        shape = RoundedCornerShape(22.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 3.dp),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 14.5.sp),
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Spacer(Modifier.width(12.dp))
-            trailing()
-        }
-    }
-}
-
-@Composable
-private fun <T> Segments(
-    values: List<T>,
-    selected: T,
-    label: (T) -> String,
-    onSelect: (T) -> Unit,
-) {
-    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        values.forEach { value ->
-            val active = value == selected
-            Surface(
-                color = if (active) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.surfaceContainerHighest,
-                shape = CircleShape,
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .clickable { onSelect(value) },
-            ) {
-                Text(
-                    text = label(value),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = if (active) MaterialTheme.colorScheme.onPrimary
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                )
-            }
-        }
-    }
-}
-
-
 /** Ввод имени: лист снизу, поле и две кнопки-пилюли. */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable

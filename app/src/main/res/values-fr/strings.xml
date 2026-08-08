@@ -62,4 +62,17 @@
     <string name="photo_credit">Photo : %1$s · Unsplash</string>
     <string name="uninstall">Désinstaller</string>
     <string name="uninstall_hint">Retire l’appli du téléphone</string>
+    <string name="vibrancy_soft">Doux</string>
+    <string name="clock">Horloge</string>
+    <string name="clock_size">Taille de l’horloge</string>
+    <string name="show_date">Afficher la date</string>
+    <string name="show_weather">Afficher la météo</string>
+    <string name="weather">Météo</string>
+    <string name="interface_font">Police</string>
+    <string name="font_search_hint">Rechercher dans Google Fonts</string>
+    <string name="about">À propos</string>
+    <string name="open_source">Code ouvert</string>
+    <string name="source_github">Code source sur GitHub</string>
+    <string name="system">Système</string>
+    <string name="screen">Écran</string>
 </resources>

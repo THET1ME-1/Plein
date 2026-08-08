@@ -203,13 +203,25 @@ class AppRepository(private val context: Context) {
         runCatching { launcherApps.startMainActivity(entry.component, entry.user, null, null) }
     }
 
-    /** Удаление: система сама спросит подтверждение. */
+    /**
+     * Удаление: система сама спросит подтверждение.
+     *
+     * Сперва ACTION_DELETE, затем ACTION_UNINSTALL_PACKAGE: на части прошивок
+     * первый интент не разбирается, и без запасного пункт молчал.
+     */
     fun uninstall(entry: AppEntry) {
-        val intent = android.content.Intent(
-            android.content.Intent.ACTION_DELETE,
-            android.net.Uri.parse("package:${entry.component.packageName}"),
-        ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-        runCatching { context.startActivity(intent) }
+        val uri = android.net.Uri.parse("package:${entry.component.packageName}")
+        val attempts = listOf(
+            android.content.Intent(android.content.Intent.ACTION_DELETE, uri),
+            android.content.Intent(android.content.Intent.ACTION_UNINSTALL_PACKAGE, uri)
+                .putExtra(android.content.Intent.EXTRA_RETURN_RESULT, true),
+        )
+        attempts.forEach { intent ->
+            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            if (runCatching { context.startActivity(intent) }.isSuccess) return
+        }
+        // Не вышло удалить — показываем карточку приложения, там кнопка есть всегда.
+        openAppInfo(entry)
     }
 
     fun openAppInfo(entry: AppEntry) {

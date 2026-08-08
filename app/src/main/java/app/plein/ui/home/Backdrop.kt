@@ -47,6 +47,7 @@ import app.plein.data.Backdrop
 import app.plein.data.PhotoPalette
 import app.plein.ui.theme.EmphasizedDecelerate
 import app.plein.ui.theme.MonoFont
+import app.plein.ui.theme.googleFontFamily
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
@@ -61,6 +62,10 @@ import java.util.Locale
 @Composable
 fun Backdrop(
     backdrop: Backdrop,
+    clockSize: String,
+    twentyFour: Boolean,
+    showDate: Boolean,
+    clockFont: String,
     onShuffle: () -> Unit,
     loading: Boolean = false,
     onOpenSettings: () -> Unit,
@@ -91,7 +96,16 @@ fun Backdrop(
         reveal.animateTo(1f, tween(650, easing = EmphasizedDecelerate))
     }
 
-    val time = remember { SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date()) }
+    val time = remember(twentyFour) {
+        SimpleDateFormat(if (twentyFour) "HH:mm" else "h:mm a", Locale.getDefault()).format(Date())
+    }
+    val clockFontSize = when (clockSize) {
+        "s" -> 30.sp
+        "l" -> 52.sp
+        "xl" -> 64.sp
+        else -> 40.sp
+    }
+    val clockFamily = if (clockFont.isEmpty()) MonoFont else googleFontFamily(clockFont)
     val date = remember {
         SimpleDateFormat("EEE, d MMM", Locale("ru")).format(Date()).uppercase(Locale("ru"))
     }
@@ -161,14 +175,14 @@ fun Backdrop(
         ) {
             Text(
                 text = time,
-                fontFamily = MonoFont,
-                fontSize = 40.sp,
-                lineHeight = 40.sp,
+                fontFamily = clockFamily,
+                fontSize = clockFontSize,
+                lineHeight = clockFontSize,
                 letterSpacing = (-1.2).sp,
                 color = Color.White,
             )
-            Text(
-                text = "$date · +19°",
+            if (showDate) Text(
+                text = date,
                 fontFamily = MonoFont,
                 fontSize = 10.5.sp,
                 letterSpacing = 1.3.sp,

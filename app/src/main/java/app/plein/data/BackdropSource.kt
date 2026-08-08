@@ -62,12 +62,15 @@ class BackdropSource(private val context: Context) {
 
     private fun randomQuery(): String = QUERIES.random()
 
-    private fun randomPage(): Int = Random.nextInt(1, 12)
+    private fun randomPage(): Int = Random.nextInt(1, 8)
 
     private fun search(query: String, page: Int): List<Candidate> {
         val url = URL(
+            // category=photograph отсекает карты, схемы и рисунки, из-за которых
+            // в выдаче попадались люди и всякий хлам вместо видов.
             "https://api.openverse.org/v1/images/?q=$query&license_type=commercial" +
-                "&size=large&aspect_ratio=tall&mature=false&page_size=12&page=$page"
+                "&size=large&category=photograph&aspect_ratio=tall&mature=false" +
+                "&page_size=12&page=$page"
         )
         val connection = (url.openConnection() as HttpURLConnection).apply {
             connectTimeout = 8000
@@ -141,9 +144,12 @@ class BackdropSource(private val context: Context) {
     private companion object {
         const val USER_AGENT = "PleinLauncher/0.1 (https://github.com/THET1ME-1/Plein)"
 
+        /** Только виды: города и природа, без портретов и репортажа. */
         val QUERIES = listOf(
-            "landscape", "mountains", "forest", "sea", "sky", "desert",
-            "lake", "field", "canyon", "coast", "fog", "night sky",
+            "cityscape", "city skyline night", "aerial city view", "old town street",
+            "mountain landscape", "misty forest", "autumn forest", "sea sunset",
+            "lake reflection", "desert dunes", "northern lights", "waterfall canyon",
+            "green valley", "snowy peaks", "coastal cliffs", "field sunrise",
         )
     }
 }

@@ -25,6 +25,7 @@ enum class ThemeMode(val titleRes: Int) {
 
 /** Насыщенность из ДНК: «Сочно» и «Точь-в-точь». Стоковый tonalSpot не используем. */
 enum class Vibrancy(val titleRes: Int) {
+    Soft(R.string.vibrancy_soft),
     Vibrant(R.string.vibrancy_vibrant),
     Fidelity(R.string.vibrancy_fidelity),
 }
@@ -49,6 +50,7 @@ fun PleinTheme(
     dynamicColor: Boolean = false,
     amoled: Boolean = false,
     vibrancy: Vibrancy = Vibrancy.Vibrant,
+    interfaceFont: String = "",
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
@@ -60,7 +62,11 @@ fun PleinTheme(
             seedColor = seed,
             isDark = dark,
             isAmoled = amoled,
-            style = if (vibrancy == Vibrancy.Vibrant) PaletteStyle.Vibrant else PaletteStyle.Fidelity,
+            style = when (vibrancy) {
+                Vibrancy.Soft -> PaletteStyle.TonalSpot
+                Vibrancy.Vibrant -> PaletteStyle.Vibrant
+                Vibrancy.Fidelity -> PaletteStyle.Fidelity
+            },
         )
     }
 
@@ -73,9 +79,33 @@ fun PleinTheme(
     val primary by animateColorAsState(scheme.primary, label = "primary")
     val animated = scheme.copy(surface = surface, primary = primary)
 
+    // Свой шрифт из каталога подменяет и заголовки, и текст.
+    val typography = if (interfaceFont.isEmpty()) {
+        PleinTypography
+    } else {
+        val family = googleFontFamily(interfaceFont)
+        PleinTypography.copy(
+            displayLarge = PleinTypography.displayLarge.copy(fontFamily = family),
+            displayMedium = PleinTypography.displayMedium.copy(fontFamily = family),
+            displaySmall = PleinTypography.displaySmall.copy(fontFamily = family),
+            headlineLarge = PleinTypography.headlineLarge.copy(fontFamily = family),
+            headlineMedium = PleinTypography.headlineMedium.copy(fontFamily = family),
+            headlineSmall = PleinTypography.headlineSmall.copy(fontFamily = family),
+            titleLarge = PleinTypography.titleLarge.copy(fontFamily = family),
+            titleMedium = PleinTypography.titleMedium.copy(fontFamily = family),
+            titleSmall = PleinTypography.titleSmall.copy(fontFamily = family),
+            bodyLarge = PleinTypography.bodyLarge.copy(fontFamily = family),
+            bodyMedium = PleinTypography.bodyMedium.copy(fontFamily = family),
+            bodySmall = PleinTypography.bodySmall.copy(fontFamily = family),
+            labelLarge = PleinTypography.labelLarge.copy(fontFamily = family),
+            labelMedium = PleinTypography.labelMedium.copy(fontFamily = family),
+            labelSmall = PleinTypography.labelSmall.copy(fontFamily = family),
+        )
+    }
+
     MaterialTheme(
         colorScheme = animated,
-        typography = PleinTypography,
+        typography = typography,
         shapes = PleinShapes,
         content = content,
     )

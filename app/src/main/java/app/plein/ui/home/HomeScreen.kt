@@ -102,6 +102,10 @@ fun HomeScreen(
     ) {
         Backdrop(
             backdrop = backdrop,
+            clockSize = prefs.clockSize,
+            twentyFour = prefs.clockTwentyFour,
+            showDate = prefs.showDate,
+            clockFont = prefs.clockFont,
             onShuffle = onShuffleBackdrop,
             loading = loadingBackdrop,
             onOpenSettings = onOpenSettings,

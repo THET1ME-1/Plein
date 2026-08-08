@@ -62,4 +62,17 @@
     <string name="photo_credit">Foto: %1$s · Unsplash</string>
     <string name="uninstall">Deinstallieren</string>
     <string name="uninstall_hint">Entfernt die App vom Telefon</string>
+    <string name="vibrancy_soft">Sanft</string>
+    <string name="clock">Uhr</string>
+    <string name="clock_size">Uhrgröße</string>
+    <string name="show_date">Datum zeigen</string>
+    <string name="show_weather">Wetter zeigen</string>
+    <string name="weather">Wetter</string>
+    <string name="interface_font">Schriftart</string>
+    <string name="font_search_hint">Google Fonts durchsuchen</string>
+    <string name="about">Über die App</string>
+    <string name="open_source">Offener Code</string>
+    <string name="source_github">Quellcode auf GitHub</string>
+    <string name="system">System</string>
+    <string name="screen">Bildschirm</string>
 </resources>

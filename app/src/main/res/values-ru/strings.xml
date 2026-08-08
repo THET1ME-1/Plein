@@ -62,4 +62,17 @@
     <string name="photo_credit">Фото: %1$s · Unsplash</string>
     <string name="uninstall">Удалить приложение</string>
     <string name="uninstall_hint">Уберёт приложение с телефона</string>
+    <string name="vibrancy_soft">Мягко</string>
+    <string name="clock">Часы</string>
+    <string name="clock_size">Размер часов</string>
+    <string name="show_date">Показывать дату</string>
+    <string name="show_weather">Показывать погоду</string>
+    <string name="weather">Погода</string>
+    <string name="interface_font">Шрифт интерфейса</string>
+    <string name="font_search_hint">Поиск по Google Fonts</string>
+    <string name="about">О программе</string>
+    <string name="open_source">Открытый код</string>
+    <string name="source_github">Исходный код на GitHub</string>
+    <string name="system">Система</string>
+    <string name="screen">Экран</string>
 </resources>

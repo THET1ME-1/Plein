@@ -131,7 +131,7 @@ fun AppMenuSheet(
                     repository.openAppInfo(entry)
                     onDismiss()
                 })
-                if (!entry.system) {
+                if (entry.component.packageName != "app.plein") {
                     MenuRow(
                         icon = Icons.Rounded.Delete,
                         title = stringResource(R.string.uninstall),

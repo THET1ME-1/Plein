@@ -1,0 +1,15 @@
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+**/build/
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Личные заметки, в репозиторий не уезжают
+CLAUDE.md
+CLAUDE.local.md

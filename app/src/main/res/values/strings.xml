@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Plein</string>
+    <string name="search_hint">Поиск по телефону</string>
+    <string name="all_apps">Все приложения</string>
+    <string name="app_info">О приложении</string>
+    <string name="uninstall">Удалить</string>
+    <string name="rename">Имя</string>
+    <string name="icon">Значок</string>
+    <string name="folders">Папки</string>
+    <string name="settings">Настройки</string>
+</resources>

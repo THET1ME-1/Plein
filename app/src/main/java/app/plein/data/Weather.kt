@@ -68,7 +68,18 @@ class Weather(private val context: Context) {
         val location = runCatching {
             manager.getProviders(true).mapNotNull { manager.getLastKnownLocation(it) }
                 .maxByOrNull { it.time }
-        }.getOrNull() ?: return null
+        }.getOrNull()
+        // Точки может не быть вовсе: тогда просим сеть дать её один раз.
+            ?: runCatching {
+                manager.requestSingleUpdate(
+                    LocationManager.NETWORK_PROVIDER,
+                    android.app.PendingIntent.getBroadcast(
+                        context, 0, android.content.Intent("app.plein.LOCATION"),
+                        android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,
+                    ),
+                )
+                null
+            }.getOrNull() ?: return null
 
         return location.latitude to location.longitude
     }

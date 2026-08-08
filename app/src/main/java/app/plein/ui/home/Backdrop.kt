@@ -31,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -66,6 +67,7 @@ fun Backdrop(
     twentyFour: Boolean,
     showDate: Boolean,
     weatherLine: String?,
+    collapse: Float = 0f,
     clockFont: String,
     onShuffle: () -> Unit,
     loading: Boolean = false,
@@ -174,6 +176,14 @@ fun Backdrop(
             Modifier
                 .align(Alignment.BottomStart)
                 .padding(start = 20.dp, bottom = 54.dp)
+                .graphicsLayer {
+                    // Часы едут вверх и мельчают: к концу хода остаётся строка.
+                    val scale = 1f - collapse * 0.42f
+                    scaleX = scale
+                    scaleY = scale
+                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 1f)
+                    translationY = -collapse * 26f
+                }
         ) {
             Text(
                 text = time,

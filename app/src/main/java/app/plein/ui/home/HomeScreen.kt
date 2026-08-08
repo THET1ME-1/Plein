@@ -33,7 +33,15 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -53,7 +61,8 @@ import app.plein.ui.theme.Emphasized
 import app.plein.ui.theme.MonoFont
 import app.plein.ui.theme.SheetCorner
 
-private val BackdropHeight = 244.dp
+private val BackdropHeight = 300.dp
+private val BackdropCollapsed = 92.dp
 private val SheetOverlap = 30.dp
 
 /**
@@ -92,6 +101,25 @@ fun HomeScreen(
     )
     val currentPage = (pagerState.currentPage - startPage).mod(pages)
 
+    // Сворачивающаяся шапка: кадр уезжает вдвое медленнее листа и гаснет,
+    // часы уменьшаются и уходят наверх. Механика снята с Overmorrow.
+    val density = LocalDensity.current
+    val maxShift = with(density) { (BackdropHeight - BackdropCollapsed).toPx() }
+    var shift by remember { mutableFloatStateOf(0f) }
+    val progress = if (maxShift == 0f) 0f else (shift / maxShift).coerceIn(0f, 1f)
+
+    val nested = remember(maxShift) {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val delta = -available.y
+                val next = (shift + delta).coerceIn(0f, maxShift)
+                val consumed = next - shift
+                shift = next
+                return if (consumed != 0f) Offset(0f, -consumed) else Offset.Zero
+            }
+        }
+    }
+
     val columns = prefs.columns
     val iconSize = iconSizeFor(columns)
     val iconShape = prefs.iconShape
@@ -101,6 +129,7 @@ fun HomeScreen(
         Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surface)
+            .nestedScroll(nested)
     ) {
         Backdrop(
             backdrop = backdrop,
@@ -113,14 +142,28 @@ fun HomeScreen(
             loading = loadingBackdrop,
             onOpenSettings = onOpenSettings,
             onSeedExtracted = onSeedExtracted,
+            collapse = progress,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(BackdropHeight),
+                .height(BackdropHeight)
+                .graphicsLayer {
+                    // Фон отстаёт сильно и слегка наезжает: так глубина видна,
+                    // а не читается как простое затемнение.
+                    translationY = -shift * 0.28f
+                    val zoom = 1f + progress * 0.12f
+                    scaleX = zoom
+                    scaleY = zoom
+                    alpha = 1f - progress * 0.35f
+                },
         )
 
         Column(Modifier.fillMaxSize()) {
 
-            Spacer(Modifier.height(BackdropHeight - SheetOverlap))
+            Spacer(
+                Modifier.height(
+                    with(density) { (BackdropHeight.toPx() - SheetOverlap.toPx() - shift).toDp() }
+                )
+            )
 
             Surface(
                 color = MaterialTheme.colorScheme.surface,

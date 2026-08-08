@@ -13,6 +13,7 @@ import androidx.compose.runtime.withFrameNanos
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -70,9 +71,25 @@ class MainActivity : ComponentActivity() {
             var isDefault by remember { mutableStateOf(DefaultLauncher.isDefault(context)) }
             var loadingBackdrop by remember { mutableStateOf(false) }
             var weatherLine by remember { mutableStateOf<String?>(null) }
+            var weatherTick by remember { mutableIntStateOf(0) }
+
+            val locationPermission = rememberLauncherForActivityResult(
+                ActivityResultContracts.RequestPermission()
+            ) { granted -> if (granted) weatherTick++ }
+
+            // Разрешение спрашиваем ровно тогда, когда погоду включили.
+            LaunchedEffect(prefs.showWeather) {
+                if (prefs.showWeather &&
+                    androidx.core.content.ContextCompat.checkSelfPermission(
+                        context, android.Manifest.permission.ACCESS_COARSE_LOCATION
+                    ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+                ) {
+                    locationPermission.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION)
+                }
+            }
 
             // Погода обновляется при показе экрана и когда её включили.
-            LaunchedEffect(prefs.showWeather, prefs.weatherProvider) {
+            LaunchedEffect(prefs.showWeather, prefs.weatherProvider, weatherTick) {
                 weatherLine = if (!prefs.showWeather) null else {
                     val weather = app.plein.data.Weather(context)
                     weather.current(prefs.weatherProvider)?.let { now ->

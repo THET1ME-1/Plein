@@ -78,4 +78,7 @@
     <string name="icon_pack">Пак значков</string>
     <string name="system_icons">Системные значки</string>
     <string name="language">Язык</string>
+    <string name="weather_app">Приложение погоды</string>
+    <string name="weather_app_hint">Выбрать приложение</string>
+    <string name="page_indicator">Индикатор страниц</string>
 </resources>

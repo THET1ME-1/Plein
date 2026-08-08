@@ -141,6 +141,13 @@ class MainActivity : ComponentActivity() {
                     backdrop = backdrop,
                     weatherTemp = weatherTemp,
                     weatherCode = weatherCode,
+                    onPullRefresh = {
+                        scope.launch {
+                            loadingBackdrop = true
+                            backdrop = backdropSource.next(dark) ?: Backdrops.next(backdrop, dark)
+                            loadingBackdrop = false
+                        }
+                    },
                     onWeatherClick = {
                         val pkg = prefs.weatherApp
                         if (pkg.isNotEmpty()) {

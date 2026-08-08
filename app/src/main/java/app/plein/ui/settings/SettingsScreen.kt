@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -29,6 +30,7 @@ import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.ArrowDownward
 import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.Contrast
@@ -49,6 +51,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -89,11 +92,14 @@ fun SettingsScreen(
     onMoveFolder: (Int, Int) -> Unit,
 ) {
     var picking by remember { mutableStateOf(false) }
+    var pickingLanguage by remember { mutableStateOf(false) }
+    var pickingWeatherApp by remember { mutableStateOf(false) }
     var pickingFontFor by remember { mutableStateOf<String?>(null) }
     var allShapes by remember { mutableStateOf(false) }
     var creating by remember { mutableStateOf(false) }
     var renamingId by remember { mutableStateOf<String?>(null) }
     var draft by remember { mutableStateOf("") }
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     Box(
         Modifier
@@ -306,6 +312,28 @@ fun SettingsScreen(
                         }
                     }
                     SettingsRow(
+                        icon = Icons.Rounded.Cloud,
+                        title = stringResource(R.string.weather_app),
+                        subtitle = prefs.weatherApp.ifEmpty { stringResource(R.string.weather_app_hint) },
+                        place = RowPlace.Middle,
+                        onClick = { pickingWeatherApp = true },
+                    )
+                    SettingsPanel(title = stringResource(R.string.page_indicator), place = RowPlace.Middle) {
+                        SegmentedPill(
+                            values = listOf("dots", "bar", "numbers", "none"),
+                            selected = prefs.pageIndicator,
+                            onSelect = { prefs.updatePageIndicator(it) },
+                            content = { value, active ->
+                                Text(
+                                    text = value,
+                                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp),
+                                    color = if (active) MaterialTheme.colorScheme.onPrimary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            },
+                        )
+                    }
+                    SettingsRow(
                         icon = Icons.Rounded.FormatSize,
                         title = stringResource(R.string.clock),
                         subtitle = prefs.clockFont.ifEmpty { "Unbounded" },
@@ -399,27 +427,12 @@ fun SettingsScreen(
 
             item {
                 SettingsSection(stringResource(R.string.language)) {
-                    val context = androidx.compose.ui.platform.LocalContext.current
-                    app.plein.data.Language.supported.forEachIndexed { index, code ->
-                        val active = code == prefs.language
-                        SettingsRow(
-                            icon = Icons.Rounded.Language,
-                            title = app.plein.data.Language.titleOf(code),
-                            place = when (index) {
-                                0 -> RowPlace.First
-                                app.plein.data.Language.supported.lastIndex -> RowPlace.Last
-                                else -> RowPlace.Middle
-                            },
-                            chipTint = if (active) MaterialTheme.colorScheme.onPrimary
-                            else MaterialTheme.colorScheme.onPrimaryContainer,
-                            chipBackground = if (active) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.primaryContainer,
-                            onClick = {
-                                prefs.updateLanguage(code)
-                                app.plein.data.Language.apply(context, code)
-                            },
-                        )
-                    }
+                    SettingsRow(
+                        icon = Icons.Rounded.Language,
+                        title = stringResource(R.string.language),
+                        subtitle = app.plein.data.Language.titleOf(prefs.language),
+                        onClick = { pickingLanguage = true },
+                    )
                 }
             }
 
@@ -441,6 +454,31 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+
+    if (pickingLanguage) {
+        ChoiceSheet(
+            title = stringResource(R.string.language),
+            options = app.plein.data.Language.supported.map { it to app.plein.data.Language.titleOf(it) },
+            selected = prefs.language,
+            onPick = { code ->
+                prefs.updateLanguage(code)
+                app.plein.data.Language.apply(context, code)
+            },
+            onDismiss = { pickingLanguage = false },
+        )
+    }
+
+    if (pickingWeatherApp) {
+        val apps = repository.apps.collectAsState().value
+        ChoiceSheet(
+            title = stringResource(R.string.weather_app),
+            options = listOf("" to stringResource(R.string.weather_app_hint)) +
+                apps.map { it.component.packageName to it.title }.distinctBy { it.first },
+            selected = prefs.weatherApp,
+            onPick = { prefs.updateWeatherApp(it) },
+            onDismiss = { pickingWeatherApp = false },
+        )
     }
 
     if (picking) {
@@ -577,6 +615,63 @@ private fun NameSheet(
                     shape = CircleShape,
                     modifier = Modifier.weight(1f).height(56.dp),
                 ) { Text(stringResource(R.string.done)) }
+            }
+        }
+    }
+}
+
+
+/** Список выбора листом снизу: язык, приложение, что угодно парами. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun ChoiceSheet(
+    title: String,
+    options: List<Pair<String, String>>,
+    selected: String,
+    onPick: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
+    ) {
+        Column(Modifier.navigationBarsPadding()) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmall.copy(fontSize = 24.sp),
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(start = 22.dp, bottom = 10.dp),
+            )
+            LazyColumn(Modifier.height(430.dp)) {
+                items(options.size, key = { options[it].first + it }) { index ->
+                    val (value, label) = options[index]
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onPick(value); onDismiss() }
+                            .padding(horizontal = 24.dp, vertical = 14.dp),
+                    ) {
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
+                            color = if (value == selected) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f),
+                        )
+                        if (value == selected) {
+                            Icon(
+                                Icons.Rounded.Check,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                    }
+                }
             }
         }
     }

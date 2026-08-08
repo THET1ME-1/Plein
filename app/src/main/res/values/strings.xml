@@ -78,4 +78,7 @@
     <string name="icon_pack">Icon pack</string>
     <string name="system_icons">System icons</string>
     <string name="language">Language</string>
+    <string name="weather_app">Weather app</string>
+    <string name="weather_app_hint">Choose an app</string>
+    <string name="page_indicator">Page indicator</string>
 </resources>

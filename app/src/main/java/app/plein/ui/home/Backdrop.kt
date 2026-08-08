@@ -70,6 +70,7 @@ fun Backdrop(
     weatherCode: Int,
     onWeatherClick: () -> Unit = {},
     collapse: Float = 0f,
+    pull: Float = 0f,
     clockFont: String,
     onShuffle: () -> Unit,
     loading: Boolean = false,
@@ -151,6 +152,18 @@ fun Backdrop(
                     )
                 )
         )
+
+        if (pull > 0.02f) {
+            // Кружок растёт под пальцем: дошёл до полного — придёт новый кадр.
+            Box(
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 96.dp)
+                    .size((22 + 22 * pull.coerceAtMost(1f)).dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.25f + 0.45f * pull.coerceAtMost(1f))),
+            )
+        }
 
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),

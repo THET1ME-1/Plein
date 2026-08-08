@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -84,6 +85,7 @@ fun HomeScreen(
     weatherTemp: String?,
     weatherCode: Int,
     onWeatherClick: () -> Unit,
+    onPullRefresh: () -> Unit,
     editing: Boolean,
     onShuffleBackdrop: () -> Unit,
     loadingBackdrop: Boolean,
@@ -110,6 +112,8 @@ fun HomeScreen(
     val density = LocalDensity.current
     val maxShift = with(density) { (BackdropHeight - BackdropCollapsed).toPx() }
     var shift by remember { mutableFloatStateOf(0f) }
+    var pull by remember { mutableFloatStateOf(0f) }
+    val pullLimit = with(density) { 120.dp.toPx() }
     val progress = if (maxShift == 0f) 0f else (shift / maxShift).coerceIn(0f, 1f)
 
     val nested = remember(maxShift) {
@@ -120,6 +124,24 @@ fun HomeScreen(
                 val consumed = next - shift
                 shift = next
                 return if (consumed != 0f) Offset(0f, -consumed) else Offset.Zero
+            }
+
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource,
+            ): Offset {
+                // Тянем вниз на развёрнутой шапке — копим ход под новый кадр.
+                if (shift <= 0f && available.y > 0f) {
+                    pull = (pull + available.y * 0.5f).coerceAtMost(pullLimit)
+                }
+                return Offset.Zero
+            }
+
+            override suspend fun onPreFling(available: Velocity): Velocity {
+                if (pull >= pullLimit * 0.75f) onPullRefresh()
+                pull = 0f
+                return Velocity.Zero
             }
         }
     }
@@ -149,6 +171,7 @@ fun HomeScreen(
             onOpenSettings = onOpenSettings,
             onSeedExtracted = onSeedExtracted,
             collapse = progress,
+            pull = pull / pullLimit,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(BackdropHeight)

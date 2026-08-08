@@ -27,12 +27,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventTimeoutCancellationException
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -48,7 +50,6 @@ import app.plein.data.MonoMode
 import app.plein.data.Placement
 import app.plein.ui.icons.IconShape
 import app.plein.ui.rememberHaptics
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.roundToInt
 
 /**
@@ -91,6 +92,10 @@ fun TilePage(
     // Клетка, куда плитка встанет прямо сейчас. Пока тащат, раскладка живёт с
     // ней, а не с исходной — поэтому соседи и разъезжаются.
     var previewCell by remember { mutableStateOf<Cell?>(null) }
+    // Откуда взяли: пока элемент в руке, в сетке он остаётся на исходном месте,
+    // а движение показывает сдвиг слоя. Иначе элемент переезжает сам, уводит
+    // из-под пальца свою систему координат, и смещение считается вдвое меньше.
+    var dragOrigin by remember { mutableStateOf<Cell?>(null) }
     val editingState = rememberUpdatedState(editing)
 
     val liveTiles = remember(tiles, dragging, previewCell) {
@@ -100,8 +105,12 @@ fun TilePage(
         else tiles.map { if (it.item.id == moved.id) it.copy(cell = target) else it }
     }
 
-    val placements = remember(apps, liveTiles, columns) {
-        CellLayout.build(apps.map { it.key }, liveTiles, columns)
+    val placements = remember(apps, liveTiles, columns, dragging, dragOrigin) {
+        val built = CellLayout.build(apps.map { it.key }, liveTiles, columns)
+        val held = dragging
+        val origin = dragOrigin
+        if (held == null || origin == null) built
+        else built.map { if (it.item.id == held.id) it.copy(cell = origin) else it }
     }
     val byKey = remember(apps) { apps.associateBy { it.key } }
 
@@ -134,15 +143,6 @@ fun TilePage(
                             Modifier
                                 .fillMaxSize()
                                 .zIndex(if (active) 3f else 0f)
-                                .graphicsLayer {
-                                    if (active) {
-                                        translationX = dragOffset.x
-                                        translationY = dragOffset.y
-                                        scaleX = 1.08f
-                                        scaleY = 1.08f
-                                        alpha = 0.94f
-                                    }
-                                }
                                 // Иконка переносится тем же жестом, что и плитка:
                                 // на странице с плитками своя раскладка, и
                                 // прежнее перетаскивание из ленивой сетки сюда
@@ -155,27 +155,24 @@ fun TilePage(
                                         var travelled = Offset.Zero
 
                                         try {
-                                            val slipped = withTimeoutOrNull(
-                                                viewConfiguration.longPressTimeoutMillis,
-                                            ) {
-                                                while (true) {
-                                                    val event = awaitPointerEvent()
-                                                    val change = event.changes
-                                                        .firstOrNull { it.id == down.id }
-                                                        ?: return@withTimeoutOrNull true
-                                                    if (!change.pressed) return@withTimeoutOrNull true
-                                                    travelled = change.position - down.position
-                                                    if (travelled.getDistance() > viewConfiguration.touchSlop) {
-                                                        return@withTimeoutOrNull true
+                                            try {
+                                                withTimeout(viewConfiguration.longPressTimeoutMillis) {
+                                                    while (true) {
+                                                        val event = awaitPointerEvent()
+                                                        val change = event.changes
+                                                            .firstOrNull { it.id == down.id }
+                                                            ?: return@withTimeout
+                                                        if (!change.pressed) return@withTimeout
+                                                        travelled = change.position - down.position
+                                                        if (travelled.getDistance() > viewConfiguration.touchSlop) {
+                                                            return@withTimeout
+                                                        }
                                                     }
                                                 }
-                                                @Suppress("UNREACHABLE_CODE")
-                                                false
-                                            }
-
-                                            if (slipped == null) {
+                                            } catch (_: PointerEventTimeoutCancellationException) {
                                                 held = true
                                                 dragging = item
+                                                dragOrigin = from
                                                 dragOffset = Offset.Zero
                                                 previewCell = from
                                                 haptics.longPress()
@@ -187,7 +184,7 @@ fun TilePage(
                                                     .firstOrNull { it.id == down.id } ?: break
                                                 if (!change.pressed) break
                                                 change.consume()
-                                                dragOffset += change.positionChange()
+                                                dragOffset = change.position - down.position
                                                 val cols = (dragOffset.x / cellWidthPx).roundToInt()
                                                 val rows = (dragOffset.y / cellHeightPx).roundToInt()
                                                 val wanted = from.copy(
@@ -223,6 +220,7 @@ fun TilePage(
                                         } finally {
                                             if (dragging?.id == item.id) {
                                                 dragging = null
+                                                dragOrigin = null
                                                 dragOffset = Offset.Zero
                                                 previewCell = null
                                             }
@@ -230,6 +228,19 @@ fun TilePage(
                                     }
                                 }
                         ) {
+                          Box(
+                            Modifier
+                                .fillMaxSize()
+                                .graphicsLayer {
+                                    if (active) {
+                                        translationX = dragOffset.x
+                                        translationY = dragOffset.y
+                                        scaleX = 1.08f
+                                        scaleY = 1.08f
+                                        alpha = 0.94f
+                                    }
+                                }
+                          ) {
                             AppCellItem(
                                 entry = entry,
                                 repository = repository,
@@ -242,6 +253,7 @@ fun TilePage(
                                 onClick = {},
                                 onLongClick = {},
                             )
+                          }
                         }
                     }
                 }
@@ -255,10 +267,19 @@ fun TilePage(
                     )
                     val startState = rememberUpdatedState(placement.cell)
 
+                    // Внешний слой неподвижен и держит жест, внутренний едет за
+                    // пальцем. Когда сдвигали тот же элемент, что ловит касания,
+                    // палец в его координатах оставался на месте — смещение
+                    // выходило нулевым, и плитка никуда не переезжала.
                     Box(
                         Modifier
                             .fillMaxSize()
+                            .testTag(item.id)
                             .zIndex(if (active) 3f else 0f)
+                    ) {
+                      Box(
+                        Modifier
+                            .fillMaxSize()
                             .graphicsLayer {
                                 if (active) {
                                     translationX = dragOffset.x
@@ -316,32 +337,34 @@ fun TilePage(
                                             // накопленный путь не перевалит за порог.
                                             val start = startState.value
                                             val liveEditing = editingState.value
-                                            val slipped = withTimeoutOrNull(
-                                                viewConfiguration.longPressTimeoutMillis,
-                                            ) {
-                                                while (true) {
-                                                    val event = awaitPointerEvent(PointerEventPass.Initial)
-                                                    val change = event.changes
-                                                        .firstOrNull { it.id == down.id } ?: return@withTimeoutOrNull true
-                                                    if (!change.pressed) return@withTimeoutOrNull true
-                                                    travelled = change.position - down.position
-                                                    // Ушёл в сторону — это прокрутка
-                                                    // страницы, не захват плитки.
-                                                    if (travelled.getDistance() > viewConfiguration.touchSlop) {
-                                                        return@withTimeoutOrNull true
+                                            // Таймаут берём у самого жеста, а не
+                                            // из корутин: обычный withTimeoutOrNull
+                                            // не будит ожидание события, поэтому
+                                            // неподвижный палец висел вечно и
+                                            // захват не наступал никогда. У Compose
+                                            // для этого свой withTimeout, он и
+                                            // бросает PointerEventTimeoutCancellation.
+                                            try {
+                                                withTimeout(viewConfiguration.longPressTimeoutMillis) {
+                                                    while (true) {
+                                                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                                                        val change = event.changes
+                                                            .firstOrNull { it.id == down.id } ?: return@withTimeout
+                                                        if (!change.pressed) return@withTimeout
+                                                        travelled = change.position - down.position
+                                                        // Ушёл в сторону — это прокрутка
+                                                        // страницы, не захват плитки.
+                                                        if (travelled.getDistance() > viewConfiguration.touchSlop) {
+                                                            return@withTimeout
+                                                        }
                                                     }
                                                 }
-                                                @Suppress("UNREACHABLE_CODE")
-                                                false
-                                            }
-
-                                            if (slipped == null) {
-                                                // Таймер дошёл до конца, палец на
-                                                // месте — плитка в руке.
+                                            } catch (_: PointerEventTimeoutCancellationException) {
                                                 held = true
                                                 lifted = true
                                                 if (!liveEditing) onStartEditing()
                                                 dragging = item
+                                                dragOrigin = start
                                                 dragOffset = Offset.Zero
                                                 previewCell = start
                                                 haptics.longPress()
@@ -353,7 +376,11 @@ fun TilePage(
                                                     .firstOrNull { it.id == down.id } ?: break
                                                 if (!change.pressed) break
                                                 change.consume()
-                                                dragOffset += change.positionChange()
+                                                // Считаем от точки касания, а не
+                                                // складываем дельты: потреблённое
+                                                // изменение отдаёт нулевой шаг, и
+                                                // смещение не набиралось вовсе.
+                                                dragOffset = change.position - down.position
                                                 val movedCols = (dragOffset.x / cellWidthPx).roundToInt()
                                                 val movedRows = (dragOffset.y / cellHeightPx).roundToInt()
                                                 val wanted = start.copy(
@@ -389,6 +416,7 @@ fun TilePage(
                                             // — ту самую «тень» рядом с плиткой.
                                             if (dragging?.id == item.id) {
                                                 dragging = null
+                                                dragOrigin = null
                                                 dragOffset = Offset.Zero
                                                 previewCell = null
                                             }
@@ -408,6 +436,7 @@ fun TilePage(
                         }
 
                         // Крестик в углу: удаление на виду, а не спрятано в меню.
+                      }
                         if (editing) {
                             Box(
                                 Modifier

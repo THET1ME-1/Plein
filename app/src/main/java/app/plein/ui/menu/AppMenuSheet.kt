@@ -27,6 +27,8 @@ import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.SwapHoriz
+import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -78,6 +80,8 @@ fun AppMenuSheet(
     onRename: (String) -> Unit,
     onToggleFolder: (String) -> Unit,
     onStartReorder: () -> Unit,
+    hidden: Boolean = false,
+    onToggleHidden: () -> Unit = {},
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var renaming by remember { mutableStateOf(false) }
@@ -183,6 +187,16 @@ fun AppMenuSheet(
                     repository.openAppInfo(entry)
                     onDismiss()
                 })
+                MenuRow(
+                    icon = if (hidden) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff,
+                    title = stringResource(if (hidden) R.string.unhide_app else R.string.hide_app),
+                    subtitle = stringResource(R.string.hide_app_hint),
+                    highlighted = hidden,
+                    onClick = {
+                        onToggleHidden()
+                        onDismiss()
+                    },
+                )
                 if (entry.component.packageName != "app.plein") {
                     MenuRow(
                         icon = Icons.Rounded.Delete,

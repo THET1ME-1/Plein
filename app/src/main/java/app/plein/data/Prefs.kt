@@ -94,6 +94,111 @@ class Prefs(context: Context) {
     var weatherApp by mutableStateOf(sp.getString(KEY_WEATHER_APP, null).orEmpty())
         private set
 
+    /** Двойной тап по пустому месту запирает экран. */
+    var gestureDoubleTapLock by mutableStateOf(sp.getBoolean(KEY_G_LOCK, false))
+        private set
+
+    fun updateGestureDoubleTapLock(value: Boolean) {
+        gestureDoubleTapLock = value
+        sp.edit().putBoolean(KEY_G_LOCK, value).apply()
+    }
+
+    /** Свайп вниз по кадру открывает шторку. */
+    var gestureShade by mutableStateOf(sp.getBoolean(KEY_G_SHADE, false))
+        private set
+
+    fun updateGestureShade(value: Boolean) {
+        gestureShade = value
+        sp.edit().putBoolean(KEY_G_SHADE, value).apply()
+    }
+
+    /** Щипок показывает все папки разом. */
+    var gesturePinch by mutableStateOf(sp.getBoolean(KEY_G_PINCH, true))
+        private set
+
+    fun updateGesturePinch(value: Boolean) {
+        gesturePinch = value
+        sp.edit().putBoolean(KEY_G_PINCH, value).apply()
+    }
+
+    /** Куда уходит запрос из строки поиска. */
+    var webProvider by mutableStateOf(sp.getString(KEY_WEB, null) ?: "google")
+        private set
+
+    fun updateWebProvider(value: String) {
+        webProvider = value
+        sp.edit().putString(KEY_WEB, value).apply()
+    }
+
+    /** Проверять обновления при запуске, не чаще раза в сутки. */
+    var autoUpdateCheck by mutableStateOf(sp.getBoolean(KEY_AUTO_UPDATE, true))
+        private set
+
+    fun updateAutoUpdateCheck(value: Boolean) {
+        autoUpdateCheck = value
+        sp.edit().putBoolean(KEY_AUTO_UPDATE, value).apply()
+    }
+
+    var lastUpdateCheck: Long
+        get() = sp.getLong(KEY_UPDATE_CHECKED, 0L)
+        set(value) {
+            sp.edit().putLong(KEY_UPDATE_CHECKED, value).apply()
+        }
+
+    /** Откуда берём кадры. */
+    var backdropOrigin by mutableStateOf(BackdropOrigin.of(sp.getString(KEY_BACKDROP_ORIGIN, null)))
+        private set
+
+    fun updateBackdropOrigin(value: BackdropOrigin) {
+        backdropOrigin = value
+        sp.edit().putString(KEY_BACKDROP_ORIGIN, value.name).apply()
+    }
+
+    /** Дерево, выбранное в проводнике: своя папка обоев. */
+    var backdropFolder by mutableStateOf(sp.getString(KEY_BACKDROP_FOLDER, null).orEmpty())
+        private set
+
+    fun updateBackdropFolder(value: String) {
+        backdropFolder = value
+        sp.edit().putString(KEY_BACKDROP_FOLDER, value).apply()
+    }
+
+    /** Кадр под время суток. */
+    var backdropByTime by mutableStateOf(sp.getBoolean(KEY_BACKDROP_TIME, true))
+        private set
+
+    fun updateBackdropByTime(value: Boolean) {
+        backdropByTime = value
+        sp.edit().putBoolean(KEY_BACKDROP_TIME, value).apply()
+    }
+
+    /** Кадр под погоду за окном. */
+    var backdropByWeather by mutableStateOf(sp.getBoolean(KEY_BACKDROP_WEATHER, false))
+        private set
+
+    fun updateBackdropByWeather(value: Boolean) {
+        backdropByWeather = value
+        sp.edit().putBoolean(KEY_BACKDROP_WEATHER, value).apply()
+    }
+
+    /** Качать кадры только по Wi-Fi. */
+    var backdropWifiOnly by mutableStateOf(sp.getBoolean(KEY_BACKDROP_WIFI, true))
+        private set
+
+    fun updateBackdropWifiOnly(value: Boolean) {
+        backdropWifiOnly = value
+        sp.edit().putBoolean(KEY_BACKDROP_WIFI, value).apply()
+    }
+
+    /** Менять кадр при каждом возвращении домой. */
+    var backdropOnReturn by mutableStateOf(sp.getBoolean(KEY_BACKDROP_RETURN, false))
+        private set
+
+    fun updateBackdropOnReturn(value: Boolean) {
+        backdropOnReturn = value
+        sp.edit().putBoolean(KEY_BACKDROP_RETURN, value).apply()
+    }
+
     /** Значки одним тоном: Off, Declared или Always. */
     var monoIcons by mutableStateOf(MonoMode.of(sp.getString(KEY_MONO, null)))
         private set
@@ -262,6 +367,18 @@ class Prefs(context: Context) {
         const val KEY_LANGUAGE = "language"
         const val KEY_PAGE_INDICATOR = "page_indicator"
         const val KEY_MONO = "mono_icons"
+        const val KEY_WEB = "web_provider"
+        const val KEY_G_LOCK = "gesture_lock"
+        const val KEY_G_SHADE = "gesture_shade"
+        const val KEY_G_PINCH = "gesture_pinch"
+        const val KEY_AUTO_UPDATE = "auto_update"
+        const val KEY_UPDATE_CHECKED = "update_checked"
+        const val KEY_BACKDROP_ORIGIN = "backdrop_origin"
+        const val KEY_BACKDROP_FOLDER = "backdrop_folder"
+        const val KEY_BACKDROP_TIME = "backdrop_by_time"
+        const val KEY_BACKDROP_WEATHER = "backdrop_by_weather"
+        const val KEY_BACKDROP_WIFI = "backdrop_wifi_only"
+        const val KEY_BACKDROP_RETURN = "backdrop_on_return"
         const val KEY_BACKDROP_FILE = "backdrop_file"
         const val KEY_BACKDROP_AUTHOR = "backdrop_author"
         const val KEY_BACKDROP_CREDIT = "backdrop_credit"

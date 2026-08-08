@@ -22,8 +22,8 @@ android {
         applicationId = "app.plein"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -111,6 +111,8 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.graphics.shapes)
+    implementation(libs.androidx.documentfile)
+    implementation(libs.androidx.biometric)
     implementation(libs.coil.compose)
     // material-kolor тянет мультиплатформенный org.jetbrains.compose.material3.
     // Пакеты у него те же, что у androidx, и он перекрывает набор символов:

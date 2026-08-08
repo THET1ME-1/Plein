@@ -53,10 +53,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.rounded.Tune
 import app.plein.R
 import app.plein.data.AppEntry
 import app.plein.search.Calculator
 import app.plein.data.AppRepository
+import app.plein.search.Converter
+import app.plein.search.Currency
+import app.plein.search.SystemSettings
 import app.plein.ui.home.AppIcon
 import app.plein.ui.theme.MonoFont
 
@@ -70,6 +74,7 @@ fun SearchScreen(
     apps: List<AppEntry>,
     repository: AppRepository,
     iconShape: app.plein.ui.icons.IconShape,
+    webProvider: String = "google",
     onAppMenu: (AppEntry) -> Unit,
     onClose: () -> Unit,
 ) {
@@ -84,6 +89,20 @@ fun SearchScreen(
         else apps.filter { it.title.contains(query, ignoreCase = true) }.take(24)
     }
     val calculated = remember(query) { Calculator.evaluate(query)?.let(Calculator::format) }
+
+    // Перевод величин считается на месте, курс валют идёт в сеть и живёт
+    // сутки в кэше: без сети показываем вчерашний и подписываем дату.
+    val converted = remember(query) { Converter.convert(query) }
+    val currency = remember { Currency(context) }
+    var money by remember(query) { mutableStateOf<Pair<Double, Currency.Rate>?>(null) }
+    LaunchedEffect(query) {
+        money = null
+        val parsed = currency.parse(query) ?: return@LaunchedEffect
+        val rate = currency.rate(parsed.second, parsed.third) ?: return@LaunchedEffect
+        money = parsed.first * rate.value to rate
+    }
+
+    val settingsFound = remember(query) { SystemSettings.search(context, query) }
 
     Box(
         Modifier
@@ -127,6 +146,70 @@ fun SearchScreen(
                                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                                 )
                             }
+                        }
+                    }
+                }
+
+                converted?.let { result ->
+                    item {
+                        ResultCard(
+                            left = result.source,
+                            right = "${Converter.format(result.value)} ${result.unit}",
+                        )
+                    }
+                }
+
+                money?.let { (value, rate) ->
+                    item {
+                        ResultCard(
+                            left = query,
+                            right = "${Converter.format(value)} ${rate.code}",
+                            note = if (rate.updated > 0) {
+                                stringResource(
+                                    R.string.rate_stale,
+                                    java.text.SimpleDateFormat("d MMM", java.util.Locale.getDefault())
+                                        .format(java.util.Date(rate.updated)),
+                                )
+                            } else {
+                                null
+                            },
+                        )
+                    }
+                }
+
+                if (settingsFound.isNotEmpty()) {
+                    item { SectionLabel(stringResource(R.string.search_section_settings)) }
+                    items(settingsFound, key = { it.action }) { entry ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    SystemSettings.open(context, entry)
+                                    onClose()
+                                }
+                                .padding(horizontal = 20.dp, vertical = 12.dp),
+                        ) {
+                            Box(
+                                Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.secondaryContainer),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Tune,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
+                            Text(
+                                text = stringResource(entry.titleRes),
+                                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 14.5.sp),
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(start = 14.dp),
+                            )
                         }
                     }
                 }
@@ -177,7 +260,10 @@ fun SearchScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=" + Uri.encode(query)))
+                                    val intent = Intent(
+                                        Intent.ACTION_VIEW,
+                                        Uri.parse(app.plein.search.WebSearch.url(webProvider, query)),
+                                    )
                                     runCatching { context.startActivity(intent) }
                                     onClose()
                                 }
@@ -275,3 +361,51 @@ private fun SectionLabel(text: String) {
         modifier = Modifier.padding(start = 22.dp, top = 14.dp, bottom = 6.dp),
     )
 }
+
+/** Карточка с ответом: слева запрос, справа результат. */
+@Composable
+internal fun ResultCard(left: String, right: String, note: String? = null) {
+    Surface(
+        color = MaterialTheme.colorScheme.primaryContainer,
+        shape = RoundedCornerShape(26.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = left,
+                    fontFamily = MonoFont,
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                note?.let {
+                    Text(
+                        text = it,
+                        fontFamily = MonoFont,
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.65f),
+                        modifier = Modifier.padding(top = 3.dp),
+                    )
+                }
+            }
+            Text(
+                text = right,
+                style = MaterialTheme.typography.headlineSmall.copy(fontSize = 21.sp),
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.padding(start = 12.dp),
+            )
+        }
+    }
+}
+
+/** Та же карточка для снимков экрана. */
+@Composable
+fun SearchPreviewCard(left: String, right: String, note: String? = null) =
+    ResultCard(left = left, right = right, note = note)

@@ -29,9 +29,12 @@ class BackdropSource(private val context: Context) {
      * поэтому качаем кандидатов и меряем сами. Уже показанные пропускаем,
      * иначе кнопка начнёт возвращать одно и то же.
      */
-    suspend fun next(dark: Boolean): Backdrop? = withContext(Dispatchers.IO) {
+    suspend fun next(
+        dark: Boolean,
+        queries: List<String> = QUERIES,
+    ): Backdrop? = withContext(Dispatchers.IO) {
         repeat(3) {
-            val candidates = runCatching { search(randomQuery(), randomPage()) }.getOrDefault(emptyList())
+            val candidates = runCatching { search(queries.random(), randomPage()) }.getOrDefault(emptyList())
             candidates.shuffled().forEach { candidate ->
                 if (candidate.id in seen) return@forEach
                 val file = runCatching { download(candidate) }.getOrNull() ?: return@forEach
@@ -59,8 +62,6 @@ class BackdropSource(private val context: Context) {
         val author: String,
         val credit: String,
     )
-
-    private fun randomQuery(): String = QUERIES.random()
 
     private fun randomPage(): Int = Random.nextInt(1, 8)
 

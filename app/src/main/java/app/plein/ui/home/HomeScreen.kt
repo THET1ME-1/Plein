@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
@@ -48,6 +49,9 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Alignment
@@ -109,8 +113,17 @@ fun HomeScreen(
     onAppMenu: (AppEntry) -> Unit,
     onReorder: (FolderConfig, List<AppEntry>) -> Unit,
     onFinishEditing: () -> Unit,
+    onDoubleTap: () -> Unit = {},
+    onShade: () -> Unit = {},
+    onOverview: () -> Unit = {},
+    hiddenCount: Int = 0,
+    hiddenUnlocked: Boolean = false,
+    hiddenApps: List<AppEntry> = emptyList(),
+    onUnlockHidden: () -> Unit = {},
 ) {
-    val pages = folders.size.coerceAtLeast(1)
+    // Страница со скрытым встаёт последней и только когда там что-то есть.
+    val hasHidden = hiddenCount > 0
+    val pages = (folders.size + if (hasHidden) 1 else 0).coerceAtLeast(1)
     val cyclic = pages > 1
 
     // Бесконечная лента: стартуем из середины, чтобы круг работал в обе стороны.
@@ -217,6 +230,7 @@ fun HomeScreen(
             .nestedScroll(nested)
     ) {
         Backdrop(
+            onSwipeDown = onShade,
             backdrop = backdrop,
             clockSize = prefs.clockSize,
             twentyFour = prefs.clockTwentyFour,
@@ -265,7 +279,26 @@ fun HomeScreen(
                 shape = RoundedCornerShape(topStart = SheetCorner, topEnd = SheetCorner),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f),
+                    .weight(1f)
+                    // Жесты слушаем на самом листе и до сетки: значки съедают
+                    // касание, а лист остаётся свободным по краям и между рядов.
+                    .pointerInput(prefs.gestureDoubleTapLock) {
+                        if (!prefs.gestureDoubleTapLock) return@pointerInput
+                        detectTapGestures(onDoubleTap = { onDoubleTap() })
+                    }
+                    .pointerInput(prefs.gesturePinch) {
+                        if (!prefs.gesturePinch) return@pointerInput
+                        var scale = 1f
+                        detectTransformGestures { _, _, zoom, _ ->
+                            scale *= zoom
+                            // Сводим пальцы заметно, а не чуть-чуть: случайное
+                            // движение по списку не должно открывать обзор.
+                            if (scale < 0.72f) {
+                                scale = 1f
+                                onOverview()
+                            }
+                        }
+                    },
             ) {
                 HorizontalPager(
                     state = pagerState,
@@ -273,6 +306,24 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxSize(),
                 ) { page ->
                     val index = (page - startPage).mod(pages)
+                    if (hasHidden && index == pages - 1) {
+                        HiddenPage(
+                            apps = hiddenApps,
+                            unlocked = hiddenUnlocked,
+                            count = hiddenCount,
+                            repository = repository,
+                            columns = columns,
+                            iconSize = iconSize,
+                            iconShape = iconShape,
+                            iconPack = iconPack,
+                            monoMode = monoMode,
+                            showLabels = prefs.showLabels,
+                            onUnlock = onUnlockHidden,
+                            onClick = { repository.launch(it) },
+                            onLongClick = onAppMenu,
+                        )
+                        return@HorizontalPager
+                    }
                     val config = folders.getOrNull(index) ?: return@HorizontalPager
                     val folder = remember(config, apps) { config.resolve(apps) }
 
@@ -512,6 +563,89 @@ private fun SearchPill(onClick: () -> Unit) {
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(21.dp),
             )
+        }
+    }
+}
+
+/**
+ * Страница со спрятанным.
+ *
+ * Пока замок закрыт, здесь только он и число: список не показываем даже
+ * серым, иначе прятать нечего.
+ */
+@Composable
+private fun HiddenPage(
+    apps: List<AppEntry>,
+    unlocked: Boolean,
+    count: Int,
+    repository: AppRepository,
+    columns: Int,
+    iconSize: Dp,
+    iconShape: app.plein.ui.icons.IconShape,
+    iconPack: String,
+    monoMode: app.plein.data.MonoMode,
+    showLabels: Boolean,
+    onUnlock: () -> Unit,
+    onClick: (AppEntry) -> Unit,
+    onLongClick: (AppEntry) -> Unit,
+) {
+    Column(Modifier.fillMaxSize()) {
+        FolderHeader(
+            title = stringResource(R.string.hidden_apps),
+            page = 0,
+            pages = 0,
+            count = count,
+            editing = false,
+            onFinishEditing = {},
+        )
+        if (unlocked) {
+            AppsGrid(
+                apps = apps,
+                repository = repository,
+                columns = columns,
+                iconSize = iconSize,
+                iconShape = iconShape,
+                iconPack = iconPack,
+                monoMode = monoMode,
+                showLabels = showLabels,
+                editing = false,
+                onReorder = {},
+                onClick = onClick,
+                onLongClick = onLongClick,
+            )
+        } else {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    shape = RoundedCornerShape(28.dp),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(28.dp))
+                        .clickable(onClick = onUnlock),
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(horizontal = 28.dp, vertical = 24.dp),
+                    ) {
+                        Icon(
+                            Icons.Rounded.Lock,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(30.dp),
+                        )
+                        Text(
+                            text = stringResource(R.string.hidden_unlock),
+                            style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(top = 10.dp),
+                        )
+                    }
+                }
+            }
         }
     }
 }

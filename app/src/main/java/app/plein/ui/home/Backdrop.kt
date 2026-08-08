@@ -39,6 +39,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -79,6 +81,7 @@ fun Backdrop(
     loading: Boolean = false,
     onOpenSettings: () -> Unit,
     onSeedExtracted: (Color) -> Unit,
+    onSwipeDown: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -132,6 +135,19 @@ fun Backdrop(
                 onClick = {},
                 onLongClick = onOpenSettings,
             )
+            // Свайп вниз по кадру отдаёт шторку системе. Порог крупный:
+            // короткое движение здесь — это оттягивание за новым кадром.
+            .pointerInput(onSwipeDown) {
+                var travelled = 0f
+                detectVerticalDragGestures(
+                    onDragStart = { travelled = 0f },
+                    onDragEnd = {
+                        if (travelled > 140f) onSwipeDown()
+                    },
+                ) { _, amount ->
+                    if (amount > 0) travelled += amount
+                }
+            }
     ) {
         photo?.let {
             Image(

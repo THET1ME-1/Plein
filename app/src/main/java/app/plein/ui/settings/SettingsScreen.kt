@@ -23,7 +23,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Accessibility
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.ArrowDownward
 import androidx.compose.material.icons.rounded.ArrowUpward
@@ -95,6 +98,12 @@ fun SettingsScreen(
     onMoveFolder: (Int, Int) -> Unit,
     onExportBackup: () -> Unit,
     onImportBackup: () -> Unit,
+    onPickPhotos: () -> Unit,
+    onPickFolder: () -> Unit,
+    onSetWallpaper: (app.plein.data.WallpaperTarget) -> Unit,
+    selfUpdating: Boolean,
+    updateState: String,
+    onCheckUpdates: () -> Unit,
 ) {
     var picking by remember { mutableStateOf(false) }
     var pickingLanguage by remember { mutableStateOf(false) }
@@ -104,6 +113,8 @@ fun SettingsScreen(
     var creating by remember { mutableStateOf(false) }
     var renamingId by remember { mutableStateOf<String?>(null) }
     var draft by remember { mutableStateOf("") }
+    var choosingWallpaper by remember { mutableStateOf(false) }
+    var pickingWeb by remember { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
     val installed by repository.apps.collectAsState()
 
@@ -481,10 +492,107 @@ fun SettingsScreen(
             item {
                 SettingsSection(stringResource(R.string.language)) {
                     SettingsRow(
+                        icon = Icons.Rounded.Search,
+                        title = stringResource(R.string.web_provider),
+                        subtitle = when (prefs.webProvider) {
+                            "ddg" -> stringResource(R.string.web_ddg)
+                            "bing" -> stringResource(R.string.web_bing)
+                            "yandex" -> stringResource(R.string.web_yandex)
+                            "startpage" -> stringResource(R.string.web_startpage)
+                            else -> stringResource(R.string.web_google)
+                        },
+                        place = RowPlace.Middle,
+                        onClick = { pickingWeb = true },
+                    )
+                    SettingsRow(
                         icon = Icons.Rounded.Language,
                         title = stringResource(R.string.language),
                         subtitle = app.plein.data.Language.titleOf(prefs.language),
                         onClick = { pickingLanguage = true },
+                    )
+                }
+            }
+
+            item {
+                SettingsSection(stringResource(R.string.backdrop)) {
+                    SettingsPanel(title = stringResource(R.string.backdrop_source), place = RowPlace.First) {
+                        SegmentedPill(
+                            values = app.plein.data.BackdropOrigin.entries.toList(),
+                            selected = prefs.backdropOrigin,
+                            onSelect = { prefs.updateBackdropOrigin(it) },
+                            content = { value, active ->
+                                Text(
+                                    text = stringResource(
+                                        when (value) {
+                                            app.plein.data.BackdropOrigin.Openverse -> R.string.backdrop_openverse
+                                            app.plein.data.BackdropOrigin.Gallery -> R.string.backdrop_gallery
+                                            app.plein.data.BackdropOrigin.Folder -> R.string.backdrop_folder
+                                            else -> R.string.backdrop_bundled
+                                        }
+                                    ),
+                                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 11.sp),
+                                    color = if (active) MaterialTheme.colorScheme.onPrimary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            },
+                        )
+                    }
+                    SettingsRow(
+                        icon = Icons.Rounded.Image,
+                        title = stringResource(R.string.pick_photos),
+                        subtitle = stringResource(R.string.pick_photos_hint),
+                        place = RowPlace.Middle,
+                        onClick = onPickPhotos,
+                    )
+                    SettingsRow(
+                        icon = Icons.Rounded.Folder,
+                        title = stringResource(R.string.pick_folder),
+                        subtitle = prefs.backdropFolder.ifEmpty { stringResource(R.string.pick_folder_hint) }
+                            .substringAfterLast('/')
+                            .ifEmpty { stringResource(R.string.pick_folder_hint) },
+                        place = RowPlace.Middle,
+                        onClick = onPickFolder,
+                    )
+                    SettingsToggleRow(
+                        icon = Icons.Rounded.Schedule,
+                        title = stringResource(R.string.backdrop_by_time),
+                        subtitle = stringResource(R.string.backdrop_by_time_hint),
+                        checked = prefs.backdropByTime,
+                        place = RowPlace.Middle,
+                        onCheckedChange = { prefs.updateBackdropByTime(it) },
+                    )
+                    SettingsToggleRow(
+                        icon = Icons.Rounded.Cloud,
+                        title = stringResource(R.string.backdrop_by_weather),
+                        subtitle = stringResource(R.string.backdrop_by_weather_hint),
+                        checked = prefs.backdropByWeather,
+                        place = RowPlace.Middle,
+                        onCheckedChange = { prefs.updateBackdropByWeather(it) },
+                    )
+                    SettingsToggleRow(
+                        icon = Icons.Rounded.Wallpaper,
+                        title = stringResource(R.string.backdrop_on_return),
+                        subtitle = stringResource(R.string.backdrop_on_return_hint),
+                        checked = prefs.backdropOnReturn,
+                        place = RowPlace.Middle,
+                        onCheckedChange = { prefs.updateBackdropOnReturn(it) },
+                    )
+                    SettingsToggleRow(
+                        icon = Icons.Rounded.Link,
+                        title = stringResource(R.string.wifi_only),
+                        subtitle = stringResource(R.string.wifi_only_hint),
+                        checked = prefs.backdropWifiOnly,
+                        place = RowPlace.Middle,
+                        onCheckedChange = { prefs.updateBackdropWifiOnly(it) },
+                    )
+                    SettingsRow(
+                        icon = Icons.Rounded.Wallpaper,
+                        title = stringResource(R.string.set_wallpaper),
+                        subtitle = stringResource(R.string.set_wallpaper_hint),
+                        place = RowPlace.Last,
+                        onClick = { choosingWallpaper = true },
                     )
                 }
             }
@@ -505,6 +613,82 @@ fun SettingsScreen(
                         place = RowPlace.Last,
                         onClick = onImportBackup,
                     )
+                }
+            }
+
+            item {
+                SettingsSection(stringResource(R.string.gestures)) {
+                    SettingsToggleRow(
+                        icon = Icons.Rounded.Lock,
+                        title = stringResource(R.string.gesture_double_tap),
+                        subtitle = stringResource(R.string.gesture_double_tap_hint),
+                        checked = prefs.gestureDoubleTapLock,
+                        place = RowPlace.First,
+                        onCheckedChange = { prefs.updateGestureDoubleTapLock(it) },
+                    )
+                    SettingsToggleRow(
+                        icon = Icons.Rounded.ArrowDownward,
+                        title = stringResource(R.string.gesture_shade),
+                        subtitle = stringResource(R.string.gesture_shade_hint),
+                        checked = prefs.gestureShade,
+                        place = RowPlace.Middle,
+                        onCheckedChange = { prefs.updateGestureShade(it) },
+                    )
+                    SettingsToggleRow(
+                        icon = Icons.Rounded.Apps,
+                        title = stringResource(R.string.gesture_pinch),
+                        subtitle = stringResource(R.string.gesture_pinch_hint),
+                        checked = prefs.gesturePinch,
+                        place = RowPlace.Middle,
+                        onCheckedChange = { prefs.updateGesturePinch(it) },
+                    )
+                    SettingsRow(
+                        icon = Icons.Rounded.Schedule,
+                        title = stringResource(R.string.dream),
+                        subtitle = stringResource(R.string.dream_hint),
+                        place = RowPlace.Middle,
+                        onClick = {
+                            runCatching {
+                                context.startActivity(
+                                    android.content.Intent(android.provider.Settings.ACTION_DREAM_SETTINGS)
+                                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                )
+                            }
+                        },
+                    )
+                    SettingsRow(
+                        icon = Icons.Rounded.Accessibility,
+                        title = stringResource(R.string.gestures_service),
+                        subtitle = stringResource(R.string.gestures_service_hint),
+                        place = RowPlace.Last,
+                        onClick = {
+                            runCatching {
+                                context.startActivity(app.plein.data.PleinGestures.settingsIntent())
+                            }
+                        },
+                    )
+                }
+            }
+
+            if (selfUpdating) {
+                item {
+                    SettingsSection(stringResource(R.string.updates)) {
+                        SettingsRow(
+                            icon = Icons.Rounded.Download,
+                            title = stringResource(R.string.check_updates),
+                            subtitle = updateState.ifEmpty { "Plein $versionName" },
+                            place = RowPlace.First,
+                            onClick = onCheckUpdates,
+                        )
+                        SettingsToggleRow(
+                            icon = Icons.Rounded.Schedule,
+                            title = stringResource(R.string.auto_check),
+                            subtitle = stringResource(R.string.auto_check_hint),
+                            checked = prefs.autoUpdateCheck,
+                            place = RowPlace.Last,
+                            onCheckedChange = { prefs.updateAutoUpdateCheck(it) },
+                        )
+                    }
                 }
             }
 
@@ -551,6 +735,44 @@ fun SettingsScreen(
             selected = prefs.weatherApp,
             onPick = { prefs.updateWeatherApp(it) },
             onDismiss = { pickingWeatherApp = false },
+        )
+    }
+
+    if (pickingWeb) {
+        ChoiceSheet(
+            title = stringResource(R.string.web_provider),
+            options = listOf(
+                "google" to stringResource(R.string.web_google),
+                "ddg" to stringResource(R.string.web_ddg),
+                "bing" to stringResource(R.string.web_bing),
+                "yandex" to stringResource(R.string.web_yandex),
+                "startpage" to stringResource(R.string.web_startpage),
+            ),
+            selected = prefs.webProvider,
+            onPick = { prefs.updateWebProvider(it) },
+            onDismiss = { pickingWeb = false },
+        )
+    }
+
+    if (choosingWallpaper) {
+        ChoiceSheet(
+            title = stringResource(R.string.set_wallpaper),
+            options = listOf(
+                "home" to stringResource(R.string.wallpaper_home),
+                "lock" to stringResource(R.string.wallpaper_lock),
+                "both" to stringResource(R.string.wallpaper_both),
+            ),
+            selected = "",
+            onPick = { value ->
+                onSetWallpaper(
+                    when (value) {
+                        "lock" -> app.plein.data.WallpaperTarget.Lock
+                        "both" -> app.plein.data.WallpaperTarget.Both
+                        else -> app.plein.data.WallpaperTarget.Home
+                    }
+                )
+            },
+            onDismiss = { choosingWallpaper = false },
         )
     }
 

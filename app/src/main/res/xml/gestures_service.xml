@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Служба ничего не слушает: типы событий пусты, флаг retrieve-window-content
+    не запрошен. Ей нужны только глобальные действия — блокировка и шторка.
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:notificationTimeout="100"
+    android:description="@string/gestures_service_description"
+    android:summary="@string/gestures_service_summary" />

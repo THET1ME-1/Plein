@@ -239,6 +239,19 @@ fun HomeScreen(
     // Щелчок на смене папки и на дотянутом жесте: рука понимает, что
     // произошло, не разглядывая экран.
     LaunchedEffect(currentPage) { haptics.tick() }
+    // Страховка: ход не вернулся сам за полторы секунды — возвращаем силой.
+    // Жест мог оборваться так, что onPreFling не пришёл вовсе, и тогда лист
+    // оставался оттянутым, а новый свайп ничего не запускал.
+    LaunchedEffect(pull) {
+        if (pull <= 0f) return@LaunchedEffect
+        kotlinx.coroutines.delay(1500)
+        animate(
+            initialValue = pull,
+            targetValue = 0f,
+            animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessLow),
+        ) { value, _ -> pull = value }
+    }
+
     val reached = pull >= pullLimit * PullPhysics.TRIGGER
     LaunchedEffect(reached) {
         if (reached) haptics.threshold()

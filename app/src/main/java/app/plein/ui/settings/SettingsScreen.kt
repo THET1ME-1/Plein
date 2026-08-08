@@ -98,6 +98,7 @@ fun SettingsScreen(
     onMoveFolder: (Int, Int) -> Unit,
     onExportBackup: () -> Unit,
     onImportBackup: () -> Unit,
+    backdropFailure: String? = null,
     onPickPhotos: () -> Unit,
     onPickFolder: () -> Unit,
     onSetWallpaper: (app.plein.data.WallpaperTarget) -> Unit,
@@ -537,6 +538,16 @@ fun SettingsScreen(
                                     overflow = TextOverflow.Ellipsis,
                                 )
                             },
+                        )
+                    }
+                    backdropFailure?.let { reason ->
+                        SettingsRow(
+                            icon = Icons.Rounded.Cloud,
+                            title = stringResource(R.string.backdrop_failed),
+                            subtitle = reason,
+                            place = RowPlace.Middle,
+                            chipTint = MaterialTheme.colorScheme.onErrorContainer,
+                            chipBackground = MaterialTheme.colorScheme.errorContainer,
                         )
                     }
                     SettingsRow(

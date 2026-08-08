@@ -109,6 +109,7 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
             var isDefault by remember { mutableStateOf(DefaultLauncher.isDefault(context)) }
             var loadingBackdrop by remember { mutableStateOf(false) }
             var backdropProgress by remember { mutableFloatStateOf(0f) }
+            var backdropFailure by remember { mutableStateOf<String?>(null) }
             var weatherTemp by remember { mutableStateOf<String?>(null) }
             var weatherCode by remember { mutableIntStateOf(0) }
             var weatherTick by remember { mutableIntStateOf(0) }
@@ -148,10 +149,25 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                         loadingBackdrop = true
                         try {
                             backdropProgress = 0f
-                            backdrop = backdropPicker.next(backdrop, dark, weatherCode) { done ->
-                                backdropProgress = done
+                            // Потолок по времени: без него зависший запрос
+                            // оставлял индикатор навсегда, и жест больше не
+                            // запускал загрузку.
+                            val fresh = kotlinx.coroutines.withTimeoutOrNull(45_000) {
+                                backdropPicker.next(backdrop, dark, weatherCode) { done ->
+                                    backdropProgress = done
+                                }
                             }
-                            prefs.saveBackdrop(backdrop)
+                            if (fresh != null) {
+                                backdrop = fresh
+                                prefs.saveBackdrop(backdrop)
+                            }
+                            backdropFailure = backdropPicker.lastFailure
+                                ?: if (fresh == null) "сеть не ответила за 45 секунд" else null
+                            backdropFailure?.let { reason ->
+                                android.widget.Toast.makeText(
+                                    context, reason, android.widget.Toast.LENGTH_SHORT,
+                                ).show()
+                            }
                         } finally {
                             loadingBackdrop = false
                             backdropProgress = 0f
@@ -502,6 +518,7 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                         onMoveFolder = { from, to -> folderStore.moveFolder(from, to) },
                         onExportBackup = { exportLauncher.launch(app.plein.data.Backup.fileName()) },
                         onImportBackup = { importLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) },
+                        backdropFailure = backdropFailure,
                         onPickPhotos = {
                             photoLauncher.launch(
                                 androidx.activity.result.PickVisualMediaRequest(

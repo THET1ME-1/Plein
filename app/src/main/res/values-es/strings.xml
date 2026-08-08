@@ -208,4 +208,5 @@
     <string name="dream_hint">Reloj mientras el teléfono descansa en la base</string>
     <string name="loading_percent">%1$d%%</string>
     <string name="update_downloading">Descargando %1$d%%</string>
+    <string name="backdrop_failed">Último intento</string>
 </resources>

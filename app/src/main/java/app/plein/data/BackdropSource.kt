@@ -11,6 +11,17 @@ import java.net.URL
 import kotlin.random.Random
 
 /**
+ * Строка из JSON без сюрпризов.
+ *
+ * `optString` отдаёт «null» строкой, когда поле в JSON равно null: подписи
+ * получались вида «null · CC0 · Openverse».
+ */
+internal fun JSONObject.text(name: String): String {
+    if (isNull(name)) return ""
+    return optString(name).takeIf { it != "null" }.orEmpty()
+}
+
+/**
  * Кадр из открытого фотобанка.
  *
  * Openverse: работает без ключа и отдаёт только материал со свободной
@@ -23,6 +34,16 @@ class BackdropSource(private val context: Context) {
     private val seen = mutableSetOf<String>()
 
     /**
+     * Запас кандидатов.
+     *
+     * У фотобанка лимит: двадцать запросов в минуту и две сотни в сутки. Один
+     * поиск отдаёт дюжину снимков, и раньше каждое нажатие тратило до трёх
+     * запросов впустую. Теперь выдача складывается сюда, и следующие кадры
+     * берутся из запаса, пока он не кончится.
+     */
+    private val pool = ArrayDeque<Candidate>()
+
+    /**
      * Новый кадр.
      *
      * Яркость — предпочтение, а не пропуск. Раньше кадр светлее или темнее
@@ -31,18 +52,37 @@ class BackdropSource(private val context: Context) {
      * фотографию вместо новой. Теперь неподошедший кадр держим про запас и
      * отдаём его, если лучше ничего не нашлось.
      */
+    /** Почему кадр не пришёл. Пусто — всё хорошо. */
+    var lastFailure: String? = null
+        private set
+
     suspend fun next(
         dark: Boolean,
         queries: List<String> = QUERIES,
         onProgress: (Float) -> Unit = {},
     ): Backdrop? = withContext(Dispatchers.IO) {
         var spare: Backdrop? = null
+        var searched = 0
+        var downloaded = 0
+        var lastError: String? = null
 
         repeat(3) {
-            val candidates = runCatching { search(queries.random(), randomPage()) }.getOrDefault(emptyList())
-            candidates.shuffled().forEach { candidate ->
+            if (pool.isEmpty()) {
+                val candidates = runCatching { search(queries.random(), randomPage()) }
+                    .onFailure { lastError = it.shortReason() }
+                    .getOrDefault(emptyList())
+                pool.addAll(candidates.shuffled())
+            }
+            val candidates = buildList {
+                while (pool.isNotEmpty() && size < 6) add(pool.removeFirst())
+            }
+            searched += candidates.size
+            candidates.forEach { candidate ->
                 if (candidate.id in seen) return@forEach
-                val file = runCatching { download(candidate, onProgress) }.getOrNull() ?: return@forEach
+                val file = runCatching { download(candidate, onProgress) }
+                    .onFailure { lastError = it.shortReason() }
+                    .getOrNull() ?: return@forEach
+                downloaded++
                 val luminance = luminanceOf(file) ?: return@forEach
                 val found = Backdrop(
                     file = file,
@@ -56,10 +96,24 @@ class BackdropSource(private val context: Context) {
                     return@forEach
                 }
                 seen += candidate.id
+                lastFailure = null
                 return@withContext found
             }
         }
+        lastFailure = when {
+            spare != null -> null
+            searched == 0 -> lastError ?: "поиск ничего не отдал"
+            downloaded == 0 -> lastError ?: "снимки не качаются"
+            else -> "все кадры уже показаны"
+        }
         spare
+    }
+
+    private fun Throwable.shortReason(): String = when (this) {
+        is java.net.SocketTimeoutException -> "сеть не отвечает"
+        is java.net.UnknownHostException -> "нет доступа к сети"
+        is java.io.FileNotFoundException -> "фотобанк отказал (лимит запросов)"
+        else -> this::class.simpleName.orEmpty().ifEmpty { "сбой сети" }
     }
 
     private data class Candidate(
@@ -93,8 +147,10 @@ class BackdropSource(private val context: Context) {
             val link = item.optString("url").takeIf { it.isNotBlank() } ?: return@mapNotNull null
             val width = item.optInt("width")
             if (width in 1..1000) return@mapNotNull null
-            val creator = item.optString("creator").ifBlank { "Unknown" }
-            val license = item.optString("license").uppercase()
+            // optString отдаёт строку «null», когда поле в JSON равно null:
+            // отсюда и брались подписи вида «null · CC0 · Openverse».
+            val creator = item.text("creator").ifBlank { "Unknown" }
+            val license = item.text("license").uppercase()
             Candidate(
                 id = item.optString("id"),
                 url = link,

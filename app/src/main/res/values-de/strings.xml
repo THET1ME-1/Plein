@@ -208,4 +208,5 @@
     <string name="dream_hint">Uhr, während das Telefon in der Station ruht</string>
     <string name="loading_percent">%1$d%%</string>
     <string name="update_downloading">Lade %1$d%%</string>
+    <string name="backdrop_failed">Letzter Versuch</string>
 </resources>

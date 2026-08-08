@@ -15,6 +15,11 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.createBitmap
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
@@ -38,7 +43,15 @@ class AppRepository(private val context: Context) {
     val apps: StateFlow<List<AppEntry>> = _apps
 
     /** Значки держим в памяти: без кэша шторка мигает на каждом открытии. */
-    private val iconCache = LruCache<String, ImageBitmap>(256)
+    private val iconCache = LruCache<String, ImageBitmap>(512)
+
+    /**
+     *LauncherActivityInfo по ключу.
+     *
+     * Без этой карты каждый значок заново дёргал getActivityList: сто иконок
+     * означали сто обращений к системной службе и пропущенные кадры.
+     */
+    private val activityInfos = HashMap<String, android.content.pm.LauncherActivityInfo>()
 
     private val collator: Collator = Collator.getInstance(Locale("ru")).apply {
         strength = Collator.PRIMARY
@@ -64,16 +77,22 @@ class AppRepository(private val context: Context) {
             launcherApps.profiles.forEach { if (it != Process.myUserHandle()) add(it) }
         }
         val pm = context.packageManager
+        // Одним вызовом вместо getApplicationInfo на каждый пакет.
+        val categories = runCatching {
+            pm.getInstalledApplications(0).associate { it.packageName to it.category }
+        }.getOrDefault(emptyMap())
+
+        val infos = HashMap<String, android.content.pm.LauncherActivityInfo>()
         val list = users.flatMap { user ->
             runCatching { launcherApps.getActivityList(null, user) }.getOrDefault(emptyList())
                 .map { info ->
+                    infos["${info.componentName.flattenToShortString()}#${user.hashCode()}"] = info
                     AppEntry(
                         label = info.label.toString(),
                         component = info.componentName,
                         user = user,
-                        category = runCatching {
-                            pm.getApplicationInfo(info.componentName.packageName, 0).category
-                        }.getOrDefault(android.content.pm.ApplicationInfo.CATEGORY_UNDEFINED),
+                        category = categories[info.componentName.packageName]
+                            ?: android.content.pm.ApplicationInfo.CATEGORY_UNDEFINED,
                         customLabel = labels.getString(
                             "${info.componentName.flattenToShortString()}#${user.hashCode()}", null
                         ),
@@ -81,6 +100,10 @@ class AppRepository(private val context: Context) {
                 }
         }.sortedWith { a, b -> collator.compare(a.title, b.title) }
 
+        synchronized(activityInfos) {
+            activityInfos.clear()
+            activityInfos.putAll(infos)
+        }
         _apps.value = list
     }
 
@@ -88,10 +111,9 @@ class AppRepository(private val context: Context) {
         val cacheKey = "${entry.key}@$sizePx"
         iconCache.get(cacheKey)?.let { return@withContext it }
 
+        val info = synchronized(activityInfos) { activityInfos[entry.key] }
         val drawable: Drawable = runCatching {
-            launcherApps.getActivityList(entry.component.packageName, entry.user)
-                .firstOrNull { it.componentName == entry.component }
-                ?.getIcon(context.resources.displayMetrics.densityDpi)
+            info?.getIcon(context.resources.displayMetrics.densityDpi)
         }.getOrNull() ?: return@withContext null
 
         val bitmap = renderIcon(drawable, sizePx).asImageBitmap()
@@ -134,6 +156,24 @@ class AppRepository(private val context: Context) {
         }.apply()
         _apps.value = _apps.value.map {
             if (it.key == key) it.copy(customLabel = trimmed.ifEmpty { null }) else it
+        }
+    }
+
+    /**
+     * Прогрев значков.
+     *
+     * Лениво по одному значку означало рывок на каждой новой строке сетки,
+     * поэтому после обновления списка кэш заполняется целиком в несколько потоков.
+     */
+    suspend fun preloadIcons(sizePx: Int) = withContext(Dispatchers.IO) {
+        val entries = _apps.value
+        val gate = Semaphore(4)
+        coroutineScope {
+            entries.map { entry ->
+                async {
+                    gate.withPermit { icon(entry, sizePx) }
+                }
+            }.awaitAll()
         }
     }
 

@@ -161,7 +161,7 @@ fun HomeScreen(
     }
 }
 
-private fun iconSizeFor(columns: Int): Dp = when (columns) {
+fun iconSizeFor(columns: Int): Dp = when (columns) {
     3 -> 82.dp
     4 -> 61.dp
     5 -> 48.dp

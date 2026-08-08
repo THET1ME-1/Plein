@@ -25,16 +25,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -70,12 +71,17 @@ fun AppsGrid(
     val items = remember(apps) { apps.toMutableStateList() }
     val gridState = rememberLazyGridState()
 
-    var dragIndex by remember { mutableIntStateOf(-1) }
-    var dragOffset by remember { mutableStateOf(Offset.Zero) }
+    // Ключ и точки касания вместо накопленного сдвига: значок обязан оставаться
+    // под пальцем, в том числе после перестановки соседей.
+    var draggedKey by remember { mutableStateOf<String?>(null) }
+    var pointerStart by remember { mutableStateOf(Offset.Zero) }
+    var pointerNow by remember { mutableStateOf(Offset.Zero) }
+    var anchorOffset by remember { mutableStateOf(IntOffset.Zero) }
 
-    // Выход из режима правки фиксирует порядок один раз, а не на каждый сдвиг.
+    val haptics = LocalHapticFeedback.current
+
     LaunchedEffect(editing) {
-        if (!editing && dragIndex >= 0) dragIndex = -1
+        if (!editing) draggedKey = null
     }
 
     fun itemAt(position: Offset): LazyGridItemInfo? =
@@ -84,32 +90,41 @@ fun AppsGrid(
                 position.y >= info.offset.y && position.y <= info.offset.y + info.size.height
         }
 
+    fun offsetOf(key: String): IntOffset? =
+        gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == key }
+            ?.let { IntOffset(it.offset.x, it.offset.y) }
+
     val dragModifier = if (!editing) Modifier else Modifier.pointerInput(items.size, columns) {
         detectDragGesturesAfterLongPress(
             onDragStart = { start ->
-                dragIndex = itemAt(start)?.index ?: -1
-                dragOffset = Offset.Zero
+                val info = itemAt(start)
+                if (info == null) {
+                    draggedKey = null
+                    return@detectDragGesturesAfterLongPress
+                }
+                draggedKey = items.getOrNull(info.index)?.key
+                pointerStart = start
+                pointerNow = start
+                anchorOffset = IntOffset(info.offset.x, info.offset.y)
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
             },
             onDrag = { change, amount ->
                 change.consume()
-                if (dragIndex < 0) return@detectDragGesturesAfterLongPress
-                dragOffset += amount
+                val key = draggedKey ?: return@detectDragGesturesAfterLongPress
+                pointerNow += amount
+
+                val from = items.indexOfFirst { it.key == key }
                 val target = itemAt(change.position)?.index ?: return@detectDragGesturesAfterLongPress
-                if (target != dragIndex && target in items.indices) {
-                    items.add(target, items.removeAt(dragIndex))
-                    dragIndex = target
-                    dragOffset = Offset.Zero
+                if (from >= 0 && target != from && target in items.indices) {
+                    items.add(target, items.removeAt(from))
+                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                 }
             },
             onDragEnd = {
-                if (dragIndex >= 0) onReorder(items.toList())
-                dragIndex = -1
-                dragOffset = Offset.Zero
+                if (draggedKey != null) onReorder(items.toList())
+                draggedKey = null
             },
-            onDragCancel = {
-                dragIndex = -1
-                dragOffset = Offset.Zero
-            },
+            onDragCancel = { draggedKey = null },
         )
     }
 
@@ -125,7 +140,17 @@ fun AppsGrid(
             .then(dragModifier),
     ) {
         itemsIndexed(items, key = { _, entry -> entry.key }) { index, entry ->
-            val dragging = index == dragIndex
+            val dragging = entry.key == draggedKey
+            // Сдвиг считается от пальца с поправкой на то, куда уехала сама ячейка.
+            val liveOffset = if (dragging) offsetOf(entry.key) else null
+            val translation = if (dragging && liveOffset != null) {
+                Offset(
+                    x = pointerNow.x - pointerStart.x + (anchorOffset.x - liveOffset.x),
+                    y = pointerNow.y - pointerStart.y + (anchorOffset.y - liveOffset.y),
+                )
+            } else {
+                Offset.Zero
+            }
             AppCell(
                 entry = entry,
                 repository = repository,
@@ -142,11 +167,11 @@ fun AppsGrid(
                     .zIndex(if (dragging) 1f else 0f)
                     .graphicsLayer {
                         if (dragging) {
-                            translationX = dragOffset.x
-                            translationY = dragOffset.y
-                            scaleX = 1.12f
-                            scaleY = 1.12f
-                            alpha = 0.92f
+                            translationX = translation.x
+                            translationY = translation.y
+                            scaleX = 1.1f
+                            scaleY = 1.1f
+                            alpha = 0.95f
                         }
                     }
                     .animateItem(),

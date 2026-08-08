@@ -9,12 +9,16 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.withFrameNanos
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import app.plein.ui.home.iconSizeFor
 import app.plein.data.AppEntry
 import app.plein.data.AppRepository
 import app.plein.data.Backdrops
@@ -68,6 +72,17 @@ class MainActivity : ComponentActivity() {
 
             LaunchedEffect(Unit) { repository.refresh() }
             LaunchedEffect(apps) { folderStore.seedIfEmpty(apps) }
+
+            // Значки грузим все разом: ленивая подгрузка дёргала кадры на скролле.
+            val density = LocalDensity.current
+            LaunchedEffect(apps, prefs.columns) {
+                if (apps.isEmpty()) return@LaunchedEffect
+                // Ждём первый кадр: иначе прогрев конкурирует с отрисовкой экрана.
+                withFrameNanos { }
+                delay(250)
+                val sizePx = with(density) { iconSizeFor(prefs.columns).roundToPx() }
+                repository.preloadIcons(sizePx)
+            }
             LaunchedEffect(dark) { backdrop = Backdrops.firstFor(dark) }
 
             // Цвет из кадра перебивает свой seed, пока это не выключено в настройках.

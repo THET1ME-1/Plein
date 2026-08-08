@@ -108,7 +108,10 @@ fun Backdrop(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxSize()
-                    .clip(MorphShape(morph, reveal.value)),
+                    .then(
+                        // Клип нужен только пока фигура растекается.
+                        if (reveal.value < 1f) Modifier.clip(MorphShape(morph, reveal.value)) else Modifier
+                    ),
             )
         }
 

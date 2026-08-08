@@ -15,12 +15,15 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import app.plein.ui.home.iconSizeFor
 import app.plein.data.AppEntry
 import app.plein.data.AppRepository
+import app.plein.data.BackdropSource
 import app.plein.data.Backdrops
 import app.plein.data.DefaultLauncher
 import app.plein.data.FolderStore
@@ -42,6 +45,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var repository: AppRepository
     private lateinit var prefs: Prefs
     private lateinit var folderStore: FolderStore
+    private lateinit var backdropSource: BackdropSource
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,6 +54,7 @@ class MainActivity : ComponentActivity() {
         repository = AppRepository(this)
         prefs = Prefs(this)
         folderStore = FolderStore(this)
+        backdropSource = BackdropSource(this)
         repository.start()
 
         setContent {
@@ -63,6 +68,8 @@ class MainActivity : ComponentActivity() {
             var menuFor by remember { mutableStateOf<AppEntry?>(null) }
             var editing by remember { mutableStateOf(false) }
             var isDefault by remember { mutableStateOf(DefaultLauncher.isDefault(context)) }
+            var loadingBackdrop by remember { mutableStateOf(false) }
+            val scope = rememberCoroutineScope()
 
             // Роль запрашивается через результат: startActivity системный диалог
             // показывает не всегда, а вернуться надо с обновлённым состоянием.
@@ -81,7 +88,7 @@ class MainActivity : ComponentActivity() {
                 withFrameNanos { }
                 delay(250)
                 val sizePx = with(density) { iconSizeFor(prefs.columns).roundToPx() }
-                repository.preloadIcons(sizePx)
+                repository.preloadIcons(sizePx, prefs.iconShape.name, prefs.iconShape.path(sizePx))
             }
             LaunchedEffect(dark) { backdrop = Backdrops.firstFor(dark) }
 
@@ -102,7 +109,17 @@ class MainActivity : ComponentActivity() {
                     prefs = prefs,
                     backdrop = backdrop,
                     editing = editing,
-                    onShuffleBackdrop = { backdrop = Backdrops.next(backdrop, dark) },
+                    onShuffleBackdrop = {
+                        // Каждое нажатие идёт в фотобанк за новым кадром;
+                        // без сети остаются вшитые.
+                        scope.launch {
+                            loadingBackdrop = true
+                            val fresh = backdropSource.next(dark)
+                            backdrop = fresh ?: Backdrops.next(backdrop, dark)
+                            loadingBackdrop = false
+                        }
+                    },
+                    loadingBackdrop = loadingBackdrop,
                     onSeedExtracted = { seed = it },
                     onOpenSearch = { screen = Screen.Search },
                     onOpenSettings = {
@@ -120,7 +137,7 @@ class MainActivity : ComponentActivity() {
                     Screen.Search -> SearchScreen(
                         apps = apps,
                         repository = repository,
-                        iconShape = prefs.iconShape.shape(),
+                        iconShape = prefs.iconShape,
                         onAppMenu = { menuFor = it },
                         onClose = { screen = Screen.Home },
                     )
@@ -147,7 +164,7 @@ class MainActivity : ComponentActivity() {
                         repository = repository,
                         folders = folderStore.folders,
                         memberOf = folderStore.foldersWith(entry.key),
-                        iconShape = prefs.iconShape.shape(),
+                        iconShape = prefs.iconShape,
                         onDismiss = { menuFor = null },
                         onRename = { name ->
                             repository.setCustomLabel(entry.key, name)

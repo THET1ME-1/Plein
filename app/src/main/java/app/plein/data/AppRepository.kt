@@ -107,8 +107,20 @@ class AppRepository(private val context: Context) {
         _apps.value = list
     }
 
-    suspend fun icon(entry: AppEntry, sizePx: Int): ImageBitmap? = withContext(Dispatchers.IO) {
-        val cacheKey = "${entry.key}@$sizePx"
+    /** Готовый значок из памяти: без корутины, чтобы прокрутка не ждала диспетчер. */
+    fun cachedIcon(entry: AppEntry, sizePx: Int, shapeKey: String): ImageBitmap? =
+        iconCache.get(cacheKeyOf(entry, sizePx, shapeKey))
+
+    private fun cacheKeyOf(entry: AppEntry, sizePx: Int, shapeKey: String) =
+        "${entry.key}@$sizePx@$shapeKey"
+
+    suspend fun icon(
+        entry: AppEntry,
+        sizePx: Int,
+        shapeKey: String,
+        shapePath: android.graphics.Path?,
+    ): ImageBitmap? = withContext(Dispatchers.IO) {
+        val cacheKey = cacheKeyOf(entry, sizePx, shapeKey)
         iconCache.get(cacheKey)?.let { return@withContext it }
 
         val info = synchronized(activityInfos) { activityInfos[entry.key] }
@@ -116,7 +128,7 @@ class AppRepository(private val context: Context) {
             info?.getIcon(context.resources.displayMetrics.densityDpi)
         }.getOrNull() ?: return@withContext null
 
-        val bitmap = renderIcon(drawable, sizePx).asImageBitmap()
+        val bitmap = renderIcon(drawable, sizePx, shapePath).asImageBitmap()
         iconCache.put(cacheKey, bitmap)
         bitmap
     }
@@ -128,9 +140,11 @@ class AppRepository(private val context: Context) {
      * поэтому рисуем их в полтора размера и берём центр. Обычная иконка
      * ужимается и кладётся по центру, иначе квадратный логотип упрётся в края.
      */
-    private fun renderIcon(drawable: Drawable, sizePx: Int): Bitmap {
+    private fun renderIcon(drawable: Drawable, sizePx: Int, shapePath: android.graphics.Path?): Bitmap {
         val output = createBitmap(sizePx, sizePx)
         val canvas = Canvas(output)
+        // Форму вжигаем в битмап: на экране остаётся обычная картинка без клипа.
+        shapePath?.let { canvas.clipPath(it) }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && drawable is AdaptiveIconDrawable) {
             val full = (sizePx * 1.5f).toInt()
@@ -165,13 +179,17 @@ class AppRepository(private val context: Context) {
      * Лениво по одному значку означало рывок на каждой новой строке сетки,
      * поэтому после обновления списка кэш заполняется целиком в несколько потоков.
      */
-    suspend fun preloadIcons(sizePx: Int) = withContext(Dispatchers.IO) {
+    suspend fun preloadIcons(
+        sizePx: Int,
+        shapeKey: String,
+        shapePath: android.graphics.Path?,
+    ) = withContext(Dispatchers.IO) {
         val entries = _apps.value
         val gate = Semaphore(4)
         coroutineScope {
             entries.map { entry ->
                 async {
-                    gate.withPermit { icon(entry, sizePx) }
+                    gate.withPermit { icon(entry, sizePx, shapeKey, shapePath) }
                 }
             }.awaitAll()
         }

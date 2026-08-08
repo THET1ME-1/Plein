@@ -72,6 +72,7 @@ fun HomeScreen(
     backdrop: Backdrop,
     editing: Boolean,
     onShuffleBackdrop: () -> Unit,
+    loadingBackdrop: Boolean,
     onSeedExtracted: (androidx.compose.ui.graphics.Color) -> Unit,
     onOpenSearch: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -92,7 +93,7 @@ fun HomeScreen(
 
     val columns = prefs.columns
     val iconSize = iconSizeFor(columns)
-    val shape = remember(prefs.iconShape) { prefs.iconShape.shape() }
+    val iconShape = prefs.iconShape
 
     Box(
         Modifier
@@ -102,6 +103,7 @@ fun HomeScreen(
         Backdrop(
             backdrop = backdrop,
             onShuffle = onShuffleBackdrop,
+            loading = loadingBackdrop,
             onOpenSettings = onOpenSettings,
             onSeedExtracted = onSeedExtracted,
             modifier = Modifier
@@ -143,7 +145,7 @@ fun HomeScreen(
                             repository = repository,
                             columns = columns,
                             iconSize = iconSize,
-                            shape = shape,
+                            iconShape = iconShape,
                             showLabels = prefs.showLabels,
                             editing = editing,
                             onReorder = { onReorder(config, it) },

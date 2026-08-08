@@ -64,7 +64,7 @@ fun AppMenuSheet(
     repository: AppRepository,
     folders: List<FolderConfig>,
     memberOf: Set<String>,
-    iconShape: Shape,
+    iconShape: app.plein.ui.icons.IconShape,
     onDismiss: () -> Unit,
     onRename: (String) -> Unit,
     onToggleFolder: (String) -> Unit,
@@ -86,7 +86,7 @@ fun AppMenuSheet(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 14.dp),
             ) {
-                AppIcon(entry = entry, repository = repository, size = 52.dp, shape = iconShape)
+                AppIcon(entry = entry, repository = repository, size = 52.dp, iconShape = iconShape)
                 Column(Modifier.padding(start = 14.dp)) {
                     Text(
                         text = entry.title,

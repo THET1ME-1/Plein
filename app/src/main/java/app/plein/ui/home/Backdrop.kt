@@ -62,21 +62,26 @@ import java.util.Locale
 fun Backdrop(
     backdrop: Backdrop,
     onShuffle: () -> Unit,
+    loading: Boolean = false,
     onOpenSettings: () -> Unit,
     onSeedExtracted: (Color) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    var photo by remember(backdrop.asset) { mutableStateOf<ImageBitmap?>(null) }
+    var photo by remember(backdrop.key) { mutableStateOf<ImageBitmap?>(null) }
 
     // Каждая смена кадра рисует свою фигуру и растекается ею в прямоугольник.
-    val morph = remember(backdrop.asset) { MorphReveal.randomMorph() }
-    val reveal = remember(backdrop.asset) { Animatable(0f) }
+    val morph = remember(backdrop.key) { MorphReveal.randomMorph() }
+    val reveal = remember(backdrop.key) { Animatable(0f) }
 
-    LaunchedEffect(backdrop.asset) {
+    LaunchedEffect(backdrop.key) {
         val decoded = withContext(Dispatchers.IO) {
             runCatching {
-                context.assets.open(backdrop.asset).use { BitmapFactory.decodeStream(it) }
+                val options = android.graphics.BitmapFactory.Options().apply { inSampleSize = 2 }
+                backdrop.file?.let { BitmapFactory.decodeFile(it.path, options) }
+                    ?: backdrop.asset?.let { asset ->
+                        context.assets.open(asset).use { BitmapFactory.decodeStream(it, null, options) }
+                    }
             }.getOrNull()
         } ?: return@LaunchedEffect
 
@@ -134,7 +139,15 @@ fun Backdrop(
                 .padding(top = 46.dp, end = 12.dp),
         ) {
             GlassButton(onClick = onShuffle, description = stringResource(R.string.another_backdrop)) {
-                Icon(Icons.Rounded.Refresh, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                if (loading) {
+                    androidx.compose.material3.CircularProgressIndicator(
+                        color = Color.White,
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(18.dp),
+                    )
+                } else {
+                    Icon(Icons.Rounded.Refresh, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                }
             }
             GlassButton(onClick = onOpenSettings, description = stringResource(R.string.settings)) {
                 Icon(Icons.Rounded.Tune, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
@@ -166,7 +179,7 @@ fun Backdrop(
         }
 
         Text(
-            text = stringResource(R.string.photo_credit, backdrop.author),
+            text = backdrop.credit,
             fontFamily = MonoFont,
             fontSize = 9.5.sp,
             letterSpacing = 0.4.sp,

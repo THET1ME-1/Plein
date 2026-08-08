@@ -60,7 +60,7 @@ fun AppsGrid(
     repository: AppRepository,
     columns: Int,
     iconSize: Dp,
-    shape: Shape,
+    iconShape: app.plein.ui.icons.IconShape,
     showLabels: Boolean,
     editing: Boolean,
     onReorder: (List<AppEntry>) -> Unit,
@@ -155,7 +155,7 @@ fun AppsGrid(
                 entry = entry,
                 repository = repository,
                 iconSize = iconSize,
-                shape = shape,
+                iconShape = iconShape,
                 showLabel = showLabels,
                 wobbling = editing && !dragging,
                 // В режиме правки ячейка не слушает нажатия: иначе она съедает
@@ -174,7 +174,9 @@ fun AppsGrid(
                             alpha = 0.95f
                         }
                     }
-                    .animateItem(),
+                    // Перестановка анимируется только в режиме правки: на обычной
+                    // прокрутке анимация позиции стоит лишних кадров.
+                    .then(if (editing) Modifier.animateItem() else Modifier),
             )
         }
     }
@@ -186,7 +188,7 @@ private fun AppCell(
     entry: AppEntry,
     repository: AppRepository,
     iconSize: Dp,
-    shape: Shape,
+    iconShape: app.plein.ui.icons.IconShape,
     showLabel: Boolean,
     wobbling: Boolean,
     interactive: Boolean,
@@ -195,6 +197,7 @@ private fun AppCell(
     modifier: Modifier = Modifier,
 ) {
     val wobble by animateFloatAsState(if (wobbling) 1f else 0f, label = "wobble")
+
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -212,7 +215,7 @@ private fun AppCell(
             )
             .padding(bottom = 6.dp),
     ) {
-        AppIcon(entry = entry, repository = repository, size = iconSize, shape = shape)
+        AppIcon(entry = entry, repository = repository, size = iconSize, iconShape = iconShape)
         if (showLabel) {
             Spacer(Modifier.height(6.dp))
             Box(

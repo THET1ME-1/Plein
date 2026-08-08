@@ -69,7 +69,7 @@ import app.plein.ui.theme.MonoFont
 fun SearchScreen(
     apps: List<AppEntry>,
     repository: AppRepository,
-    iconShape: Shape,
+    iconShape: app.plein.ui.icons.IconShape,
     onAppMenu: (AppEntry) -> Unit,
     onClose: () -> Unit,
 ) {
@@ -147,7 +147,7 @@ fun SearchScreen(
                                 )
                                 .padding(horizontal = 20.dp, vertical = 8.dp),
                         ) {
-                            AppIcon(entry = entry, repository = repository, size = 44.dp, shape = iconShape)
+                            AppIcon(entry = entry, repository = repository, size = 44.dp, iconShape = iconShape)
                             Column(Modifier.padding(start = 14.dp)) {
                                 Text(
                                     text = entry.title,

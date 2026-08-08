@@ -7,18 +7,23 @@ package app.plein.data
  * подбор под тему работал без сети. Загрузка из фотобанка встанет сюда же.
  */
 data class Backdrop(
-    val asset: String,
+    val asset: String? = null,
+    val file: java.io.File? = null,
     val author: String,
+    val credit: String = "$author · Unsplash",
     val luminance: Float,
-)
+) {
+    /** Ключ для перерисовки: у сетевого кадра это путь файла. */
+    val key: String get() = file?.path ?: asset.orEmpty()
+}
 
 object Backdrops {
 
     val bundled = listOf(
-        Backdrop("backdrop_fjord.jpg", "Alexey Topolyanskiy", 0.57f),
-        Backdrop("backdrop_sunset.jpg", "Kenneth Thewissen", 0.51f),
-        Backdrop("backdrop_forest.jpg", "James Forbes", 0.31f),
-        Backdrop("backdrop_street.jpg", "Matthew Skinner", 0.19f),
+        Backdrop(asset = "backdrop_fjord.jpg", author = "Alexey Topolyanskiy", credit = "Alexey Topolyanskiy · Unsplash", luminance = 0.57f),
+        Backdrop(asset = "backdrop_sunset.jpg", author = "Kenneth Thewissen", credit = "Kenneth Thewissen · Unsplash", luminance = 0.51f),
+        Backdrop(asset = "backdrop_forest.jpg", author = "James Forbes", credit = "James Forbes · Unsplash", luminance = 0.31f),
+        Backdrop(asset = "backdrop_street.jpg", author = "Matthew Skinner", credit = "Matthew Skinner · Unsplash", luminance = 0.19f),
     )
 
     private const val DARK_LIMIT = 0.42f

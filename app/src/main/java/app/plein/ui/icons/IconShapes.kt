@@ -41,9 +41,22 @@ enum class IconShape(val title: String, private val builder: () -> RoundedPolygo
     Triangle("Треугольник", { RoundedPolygon(numVertices = 3, rounding = CornerRounding(0.32f)).rotate(-90f) }),
     Pill("Пилюля", { RoundedPolygon.pill(width = 1f, height = 0.72f) });
 
-    private val shapeCache: Shape by lazy { PolygonShape(builder().normalized()) }
+    private val polygon: RoundedPolygon by lazy { builder().normalized() }
+    private val shapeCache: Shape by lazy { PolygonShape(polygon) }
 
     fun shape(): Shape = if (this == Circle) CircleShape else shapeCache
+
+    /**
+     * Контур формы под размер значка.
+     *
+     * Нужен, чтобы обрезать иконку один раз при отрисовке в битмап: клип
+     * произвольным путём на каждом кадре ронял прокрутку до пары кадров в секунду.
+     */
+    fun path(sizePx: Int): android.graphics.Path {
+        val path = polygon.toPath()
+        path.transform(Matrix().apply { setScale(sizePx.toFloat(), sizePx.toFloat()) })
+        return path
+    }
 
     companion object {
         /** Четыре формы на виду в настройках, остальные прячутся под «Больше». */

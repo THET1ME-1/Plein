@@ -525,10 +525,11 @@ fun SettingsScreen(
                                 Text(
                                     text = stringResource(
                                         when (value) {
+                                            app.plein.data.BackdropOrigin.Wikimedia -> R.string.backdrop_wikimedia
                                             app.plein.data.BackdropOrigin.Openverse -> R.string.backdrop_openverse
                                             app.plein.data.BackdropOrigin.Gallery -> R.string.backdrop_gallery
                                             app.plein.data.BackdropOrigin.Folder -> R.string.backdrop_folder
-                                            else -> R.string.backdrop_openverse
+                                            else -> R.string.backdrop_wikimedia
                                         }
                                     ),
                                     style = MaterialTheme.typography.labelLarge.copy(fontSize = 11.sp),

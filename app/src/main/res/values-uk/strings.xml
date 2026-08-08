@@ -209,4 +209,5 @@
     <string name="loading_percent">%1$d%%</string>
     <string name="update_downloading">Завантажую %1$d%%</string>
     <string name="backdrop_failed">Минула спроба</string>
+    <string name="backdrop_wikimedia">Викисклад</string>
 </resources>

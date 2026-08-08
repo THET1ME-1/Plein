@@ -14,6 +14,8 @@ class BackdropPicker(
     private val prefs: Prefs,
     private val library: BackdropLibrary,
     private val source: BackdropSource,
+    private val wikimedia: WikimediaSource,
+    private val screenWidth: Int = 1080,
 ) {
 
     /** Почему на экране остался прежний или вшитый кадр. */
@@ -32,16 +34,36 @@ class BackdropPicker(
             BackdropOrigin.Folder -> prefs.backdropFolder
                 .takeIf { it.isNotEmpty() }
                 ?.let { library.fromFolder(it, current) }
+            BackdropOrigin.Wikimedia -> fromWikimedia(dark, onProgress)
             BackdropOrigin.Openverse -> fromNetwork(dark, weatherCode, onProgress)
         }
         if (fresh == null && lastFailure == null) {
             lastFailure = when (prefs.backdropOrigin) {
                 BackdropOrigin.Gallery -> "своих снимков нет"
                 BackdropOrigin.Folder -> "в папке нет картинок"
+                BackdropOrigin.Wikimedia -> wikimedia.lastFailure ?: "Викисклад не ответил"
                 BackdropOrigin.Openverse -> source.lastFailure ?: "фотобанк не ответил"
             }
         }
         return fresh ?: Backdrops.next(current, dark)
+    }
+
+    /**
+     * Кадр с Викисклада.
+     *
+     * Ключа и лимитов там нет, поэтому и хитрить с запасом запросов не нужно —
+     * достаточно вежливо представиться.
+     */
+    private suspend fun fromWikimedia(dark: Boolean, onProgress: (Float) -> Unit): Backdrop? {
+        if (!Network.isOnline(context)) {
+            lastFailure = "нет сети"
+            return null
+        }
+        if (prefs.backdropWifiOnly && Network.isCellular(context)) {
+            lastFailure = "включено «только Wi-Fi», а сеть мобильная"
+            return null
+        }
+        return wikimedia.next(dark = dark, screenWidth = screenWidth, onProgress = onProgress)
     }
 
     /**

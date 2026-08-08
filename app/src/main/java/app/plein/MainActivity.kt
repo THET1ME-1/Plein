@@ -84,7 +84,14 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
         backdropSource = BackdropSource(this)
         hiddenApps = app.plein.data.HiddenApps(this)
         backdropLibrary = app.plein.data.BackdropLibrary(this)
-        backdropPicker = app.plein.data.BackdropPicker(this, prefs, backdropLibrary, backdropSource)
+        backdropPicker = app.plein.data.BackdropPicker(
+            context = this,
+            prefs = prefs,
+            library = backdropLibrary,
+            source = backdropSource,
+            wikimedia = app.plein.data.WikimediaSource(this),
+            screenWidth = resources.displayMetrics.widthPixels,
+        )
         repository.start()
 
         setContent {

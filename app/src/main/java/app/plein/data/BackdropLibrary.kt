@@ -17,7 +17,10 @@ import java.util.Calendar
  * когда сети нет вовсе.
  */
 enum class BackdropOrigin {
-    /** Openverse: свободные лицензии, ключ не нужен. */
+    /** Викисклад: ключа не просит, лимитов не выставляет, отдаёт превью. */
+    Wikimedia,
+
+    /** Openverse: свободные лицензии, но двадцать запросов в минуту. */
     Openverse,
 
     /** Снимки, выбранные в галерее и скопированные к себе. */
@@ -28,7 +31,7 @@ enum class BackdropOrigin {
 
     companion object {
         fun of(name: String?): BackdropOrigin =
-            entries.firstOrNull { it.name.equals(name, ignoreCase = true) } ?: Openverse
+            entries.firstOrNull { it.name.equals(name, ignoreCase = true) } ?: Wikimedia
     }
 }
 

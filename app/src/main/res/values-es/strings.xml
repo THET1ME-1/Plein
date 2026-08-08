@@ -209,4 +209,5 @@
     <string name="loading_percent">%1$d%%</string>
     <string name="update_downloading">Descargando %1$d%%</string>
     <string name="backdrop_failed">Último intento</string>
+    <string name="backdrop_wikimedia">Wikimedia</string>
 </resources>

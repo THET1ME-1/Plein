@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.plein.R
 import app.plein.data.Backdrop
+import app.plein.data.BackdropDecoder
 import app.plein.data.PhotoPalette
 import app.plein.ui.theme.EmphasizedDecelerate
 import app.plein.ui.theme.MonoFont
@@ -100,7 +101,7 @@ fun Backdrop(
 
     LaunchedEffect(backdrop.key, screenWidth) {
         val decoded = withContext(Dispatchers.IO) {
-            runCatching { decodeForScreen(context, backdrop, screenWidth) }.getOrNull()
+            runCatching { BackdropDecoder.forScreen(context, backdrop, screenWidth) }.getOrNull()
         } ?: return@LaunchedEffect
 
         photo = decoded.asImageBitmap()
@@ -302,39 +303,6 @@ fun Backdrop(
                 .padding(end = 14.dp, bottom = 40.dp),
         )
     }
-}
-
-/**
- * Кадр под размер экрана.
- *
- * Фотографии из банка приходят по три-четыре тысячи точек в ширину: в памяти
- * это полсотни мегабайт, а на телефоне — рывки, сборка мусора и залипающая
- * прокрутка. Читаем размеры, считаем степень двойки и декодируем сразу
- * маленьким — по ширине экрана с запасом в полтора раза на зум шапки.
- */
-private fun decodeForScreen(
-    context: android.content.Context,
-    backdrop: Backdrop,
-    screenWidth: Int,
-): android.graphics.Bitmap? {
-    fun open(): java.io.InputStream? = when {
-        backdrop.file != null -> backdrop.file.inputStream()
-        backdrop.asset != null -> context.assets.open(backdrop.asset)
-        else -> null
-    }
-
-    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-    open()?.use { BitmapFactory.decodeStream(it, null, bounds) } ?: return null
-
-    val target = (screenWidth * 1.5f).toInt().coerceAtLeast(720)
-    var sample = 1
-    while (bounds.outWidth / (sample * 2) >= target) sample *= 2
-
-    val options = BitmapFactory.Options().apply {
-        inSampleSize = sample
-        inPreferredConfig = android.graphics.Bitmap.Config.ARGB_8888
-    }
-    return open()?.use { BitmapFactory.decodeStream(it, null, options) }
 }
 
 @OptIn(ExperimentalFoundationApi::class)

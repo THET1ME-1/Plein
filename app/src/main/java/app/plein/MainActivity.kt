@@ -70,7 +70,8 @@ class MainActivity : ComponentActivity() {
             var editing by remember { mutableStateOf(false) }
             var isDefault by remember { mutableStateOf(DefaultLauncher.isDefault(context)) }
             var loadingBackdrop by remember { mutableStateOf(false) }
-            var weatherLine by remember { mutableStateOf<String?>(null) }
+            var weatherTemp by remember { mutableStateOf<String?>(null) }
+            var weatherCode by remember { mutableIntStateOf(0) }
             var weatherTick by remember { mutableIntStateOf(0) }
 
             val locationPermission = rememberLauncherForActivityResult(
@@ -90,11 +91,12 @@ class MainActivity : ComponentActivity() {
 
             // Погода обновляется при показе экрана и когда её включили.
             LaunchedEffect(prefs.showWeather, prefs.weatherProvider, weatherTick) {
-                weatherLine = if (!prefs.showWeather) null else {
-                    val weather = app.plein.data.Weather(context)
-                    weather.current(prefs.weatherProvider)?.let { now ->
-                        "${weather.glyph(now.code)} ${now.celsius}°"
-                    }
+                if (!prefs.showWeather) {
+                    weatherTemp = null
+                } else {
+                    val now = app.plein.data.Weather(context).current(prefs.weatherProvider)
+                    weatherTemp = now?.let { "${it.celsius}°" }
+                    weatherCode = now?.code ?: 0
                 }
             }
             val scope = rememberCoroutineScope()
@@ -137,7 +139,8 @@ class MainActivity : ComponentActivity() {
                     repository = repository,
                     prefs = prefs,
                     backdrop = backdrop,
-                    weatherLine = weatherLine,
+                    weatherTemp = weatherTemp,
+                    weatherCode = weatherCode,
                     editing = editing,
                     onShuffleBackdrop = {
                         // Каждое нажатие идёт в фотобанк за новым кадром;

@@ -77,4 +77,5 @@
     <string name="screen">Экран</string>
     <string name="icon_pack">Пак значков</string>
     <string name="system_icons">Системные значки</string>
+    <string name="language">Язык</string>
 </resources>

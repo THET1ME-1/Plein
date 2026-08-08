@@ -68,6 +68,7 @@ fun Backdrop(
     showDate: Boolean,
     weatherTemp: String?,
     weatherCode: Int,
+    onWeatherClick: () -> Unit = {},
     collapse: Float = 0f,
     clockFont: String,
     onShuffle: () -> Unit,
@@ -196,7 +197,11 @@ fun Backdrop(
             )
             if (showDate || weatherTemp != null) Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(top = 6.dp),
+                modifier = Modifier
+                    .padding(top = 6.dp)
+                    .clip(CircleShape)
+                    .combinedClickable(onClick = onWeatherClick)
+                    .padding(vertical = 2.dp),
             ) {
                 if (weatherTemp != null) {
                     Icon(

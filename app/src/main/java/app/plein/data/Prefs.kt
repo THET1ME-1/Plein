@@ -90,6 +90,33 @@ class Prefs(context: Context) {
         sp.edit().putString(KEY_WEATHER_PROVIDER, value).apply()
     }
 
+    /** Что открывать по нажатию на погоду. Пусто означает ничего. */
+    var weatherApp by mutableStateOf(sp.getString(KEY_WEATHER_APP, null).orEmpty())
+        private set
+
+    /** dots, bar, numbers или none. */
+    var pageIndicator by mutableStateOf(sp.getString(KEY_PAGE_INDICATOR, null) ?: "dots")
+        private set
+
+    /** Код языка или пусто для системного. */
+    var language by mutableStateOf(sp.getString(KEY_LANGUAGE, null).orEmpty())
+        private set
+
+    fun updateLanguage(value: String) {
+        language = value
+        sp.edit().putString(KEY_LANGUAGE, value).apply()
+    }
+
+    fun updateWeatherApp(value: String) {
+        weatherApp = value
+        sp.edit().putString(KEY_WEATHER_APP, value).apply()
+    }
+
+    fun updatePageIndicator(value: String) {
+        pageIndicator = value
+        sp.edit().putString(KEY_PAGE_INDICATOR, value).apply()
+    }
+
     fun updateIconPack(value: String) {
         iconPack = value
         sp.edit().putString(KEY_ICON_PACK, value).apply()
@@ -189,6 +216,9 @@ class Prefs(context: Context) {
         const val KEY_UI_FONT = "ui_font"
         const val KEY_ICON_PACK = "icon_pack"
         const val KEY_WEATHER_PROVIDER = "weather_provider"
+        const val KEY_WEATHER_APP = "weather_app"
+        const val KEY_LANGUAGE = "language"
+        const val KEY_PAGE_INDICATOR = "page_indicator"
 
         /** Амбра из Wickly: тёплая и спокойная в обеих темах. */
         const val DEFAULT_SEED = 0xFFC0863E.toInt()

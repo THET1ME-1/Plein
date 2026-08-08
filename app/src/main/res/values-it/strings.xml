@@ -77,4 +77,5 @@
     <string name="screen">Schermo</string>
     <string name="icon_pack">Pacchetto icone</string>
     <string name="system_icons">Icone di sistema</string>
+    <string name="language">Lingua</string>
 </resources>

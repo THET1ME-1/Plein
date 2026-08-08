@@ -13,7 +13,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -81,6 +83,7 @@ fun HomeScreen(
     backdrop: Backdrop,
     weatherTemp: String?,
     weatherCode: Int,
+    onWeatherClick: () -> Unit,
     editing: Boolean,
     onShuffleBackdrop: () -> Unit,
     loadingBackdrop: Boolean,
@@ -139,6 +142,7 @@ fun HomeScreen(
             showDate = prefs.showDate,
             weatherTemp = weatherTemp,
             weatherCode = weatherCode,
+            onWeatherClick = onWeatherClick,
             clockFont = prefs.clockFont,
             onShuffle = onShuffleBackdrop,
             loading = loadingBackdrop,
@@ -209,7 +213,7 @@ fun HomeScreen(
                 }
             }
 
-            PageDots(pages = pages, current = currentPage)
+            PageIndicator(style = prefs.pageIndicator, pages = pages, current = currentPage)
 
             SearchPill(onClick = onOpenSearch)
         }
@@ -282,6 +286,49 @@ private fun FolderHeader(
             )
         }
     }
+}
+
+@Composable
+private fun PageIndicator(style: String, pages: Int, current: Int) {
+    if (style == "none") {
+        Spacer(Modifier.height(12.dp))
+        return
+    }
+    if (style == "numbers") {
+        Text(
+            text = "${current + 1} / $pages",
+            fontFamily = MonoFont,
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 10.dp, bottom = 12.dp),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
+        return
+    }
+    if (style == "bar") {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 60.dp, vertical = 14.dp)
+                .height(4.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.outlineVariant),
+        ) {
+            Box(
+                Modifier
+                    .fillMaxWidth(1f / pages.coerceAtLeast(1))
+                    .fillMaxHeight()
+                    .offset(x = 0.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary)
+                    .graphicsLayer { translationX = size.width * current }
+            )
+        }
+        return
+    }
+    PageDots(pages = pages, current = current)
 }
 
 @Composable

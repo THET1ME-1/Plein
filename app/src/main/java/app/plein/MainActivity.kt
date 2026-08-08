@@ -141,6 +141,13 @@ class MainActivity : ComponentActivity() {
                     backdrop = backdrop,
                     weatherTemp = weatherTemp,
                     weatherCode = weatherCode,
+                    onWeatherClick = {
+                        val pkg = prefs.weatherApp
+                        if (pkg.isNotEmpty()) {
+                            val intent = packageManager.getLaunchIntentForPackage(pkg)
+                            if (intent != null) runCatching { startActivity(intent) }
+                        }
+                    },
                     editing = editing,
                     onShuffleBackdrop = {
                         // Каждое нажатие идёт в фотобанк за новым кадром;

@@ -39,6 +39,7 @@ import androidx.compose.material.icons.rounded.FormatSize
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Label
+import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Schedule
@@ -393,6 +394,32 @@ fun SettingsScreen(
                         chipBackground = MaterialTheme.colorScheme.tertiaryContainer,
                         onClick = { creating = true; draft = "" },
                     )
+                }
+            }
+
+            item {
+                SettingsSection(stringResource(R.string.language)) {
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    app.plein.data.Language.supported.forEachIndexed { index, code ->
+                        val active = code == prefs.language
+                        SettingsRow(
+                            icon = Icons.Rounded.Language,
+                            title = app.plein.data.Language.titleOf(code),
+                            place = when (index) {
+                                0 -> RowPlace.First
+                                app.plein.data.Language.supported.lastIndex -> RowPlace.Last
+                                else -> RowPlace.Middle
+                            },
+                            chipTint = if (active) MaterialTheme.colorScheme.onPrimary
+                            else MaterialTheme.colorScheme.onPrimaryContainer,
+                            chipBackground = if (active) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.primaryContainer,
+                            onClick = {
+                                prefs.updateLanguage(code)
+                                app.plein.data.Language.apply(context, code)
+                            },
+                        )
+                    }
                 }
             }
 

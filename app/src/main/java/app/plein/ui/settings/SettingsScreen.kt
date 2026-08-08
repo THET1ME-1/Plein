@@ -45,6 +45,7 @@ import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.TextFields
 import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.Icon
@@ -476,6 +477,7 @@ fun SettingsScreen(
             options = listOf("" to stringResource(R.string.weather_app_hint)) +
                 apps.map { it.component.packageName to it.title }.distinctBy { it.first },
             selected = prefs.weatherApp,
+            searchable = true,
             onPick = { prefs.updateWeatherApp(it) },
             onDismiss = { pickingWeatherApp = false },
         )
@@ -628,10 +630,16 @@ private fun ChoiceSheet(
     title: String,
     options: List<Pair<String, String>>,
     selected: String,
+    searchable: Boolean = false,
     onPick: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var query by remember { mutableStateOf("") }
+    val shown = remember(query, options) {
+        if (query.isBlank()) options
+        else options.filter { it.second.contains(query, ignoreCase = true) || it.first.contains(query, ignoreCase = true) }
+    }
     androidx.compose.material3.ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -645,9 +653,22 @@ private fun ChoiceSheet(
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(start = 22.dp, bottom = 10.dp),
             )
+            if (searchable) {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    singleLine = true,
+                    shape = CircleShape,
+                    leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
+                    placeholder = { Text(stringResource(R.string.search_hint)) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 18.dp, vertical = 6.dp),
+                )
+            }
             LazyColumn(Modifier.height(430.dp)) {
-                items(options.size, key = { options[it].first + it }) { index ->
-                    val (value, label) = options[index]
+                items(shown.size, key = { shown[it].first + it }) { index ->
+                    val (value, label) = shown[index]
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier

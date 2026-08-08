@@ -79,6 +79,11 @@ class WikimediaSource(private val context: Context) {
                 return@withContext found
             }
         }
+        if (spare == null && seen.size > 120) {
+            // Всё показанное помнить незачем: иначе подборка когда-нибудь
+            // кончится и лаунчер станет отвечать «ничего не отдал».
+            seen.clear()
+        }
         lastFailure = if (spare == null) lastError ?: "Викисклад ничего не отдал" else null
         spare
     }
@@ -86,15 +91,17 @@ class WikimediaSource(private val context: Context) {
     /**
      * Список снимков из категории.
      *
-     * Панорамы и лежачие кадры отбрасываем: экран телефона стоячий, и полоса
-     * шириной в девять экранов на нём выглядит обрезком.
+     * Срез берём со случайной буквы алфавита: без неё выдача одна и та же от
+     * запроса к запросу — пятьдесят одних и тех же файлов, и как только они
+     * показаны, категория молчит навсегда.
      */
     private fun search(category: String, screenWidth: Int): List<Shot> {
         val width = (screenWidth * 1.4f).toInt().coerceIn(720, 2000)
+        val from = ALPHABET.random()
         val url = URL(
             "https://commons.wikimedia.org/w/api.php?action=query&format=json" +
                 "&generator=categorymembers&gcmtitle=" + URLEncoder.encode(category, "UTF-8") +
-                "&gcmtype=file&gcmlimit=50&gcmsort=timestamp&gcmdir=descending" +
+                "&gcmtype=file&gcmlimit=50&gcmstartsortkeyprefix=$from" +
                 "&prop=imageinfo&iiprop=url%7Cextmetadata%7Csize&iiurlwidth=$width"
         )
         val connection = (url.openConnection() as HttpURLConnection).apply {
@@ -116,9 +123,7 @@ class WikimediaSource(private val context: Context) {
 
             val shotWidth = info.optInt("thumbwidth", info.optInt("width"))
             val shotHeight = info.optInt("thumbheight", info.optInt("height"))
-            if (shotWidth <= 0 || shotHeight <= 0) return@mapNotNull null
-            // Стоячие и почти квадратные годятся, панорамы нет.
-            if (shotHeight.toFloat() / shotWidth < 0.9f) return@mapNotNull null
+            if (!fitsScreen(shotWidth, shotHeight)) return@mapNotNull null
 
             val meta = info.optJSONObject("extmetadata")
             Shot(
@@ -190,6 +195,24 @@ class WikimediaSource(private val context: Context) {
     companion object {
         /** Правило Викисклада: клиент обязан представиться и оставить ссылку. */
         const val USER_AGENT = "PleinLauncher/0.3 (https://github.com/THET1ME-1/Plein)"
+
+        /**
+         * Годится ли кадр шапке.
+         *
+         * Шапка — лежачая полоса во всю ширину экрана, поэтому обычные
+         * горизонтальные снимки как раз то, что нужно. Прошлая проверка
+         * пропускала только стоячие, а их в подборках три из сорока пяти:
+         * почти всё выбрасывалось, и категория пустела с третьего кадра.
+         * Отсекаем только крайности — панорамы и башни.
+         */
+        fun fitsScreen(width: Int, height: Int): Boolean {
+            if (width <= 0 || height <= 0) return false
+            val ratio = height.toFloat() / width
+            return ratio in 0.35f..2.0f
+        }
+
+        /** Буквы для случайного среза по алфавиту. */
+        private val ALPHABET = ('a'..'z').toList() + ('0'..'9').toList()
 
         /** Отобранные людьми категории: там снимки, а не документы и схемы. */
         val LANDSCAPES = listOf(

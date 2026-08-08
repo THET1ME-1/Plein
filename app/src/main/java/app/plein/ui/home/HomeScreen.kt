@@ -219,6 +219,26 @@ fun HomeScreen(
                 return Offset(0f, available.y)
             }
 
+            /**
+             * Инерция кончилась, а ход остался — возвращаем.
+             *
+             * Жест иногда обрывается так, что onPreFling не приходит вовсе:
+             * без этой страховки лист оставался оттянутым, и следующий свайп
+             * ничего не запускал. Раньше страховка висела на LaunchedEffect с
+             * ключом по самому ходу — она перезапускала себя от собственной
+             * анимации и дёргала лист вместо возврата.
+             */
+            override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+                if (pull > 0f) {
+                    animate(
+                        initialValue = pull,
+                        targetValue = 0f,
+                        animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessLow),
+                    ) { value, _ -> pull = value }
+                }
+                return Velocity.Zero
+            }
+
             override suspend fun onPreFling(available: Velocity): Velocity {
                 if (pull <= 0f) return Velocity.Zero
                 // Хватает почти полного круга: добрать последние проценты
@@ -239,19 +259,6 @@ fun HomeScreen(
     // Щелчок на смене папки и на дотянутом жесте: рука понимает, что
     // произошло, не разглядывая экран.
     LaunchedEffect(currentPage) { haptics.tick() }
-    // Страховка: ход не вернулся сам за полторы секунды — возвращаем силой.
-    // Жест мог оборваться так, что onPreFling не пришёл вовсе, и тогда лист
-    // оставался оттянутым, а новый свайп ничего не запускал.
-    LaunchedEffect(pull) {
-        if (pull <= 0f) return@LaunchedEffect
-        kotlinx.coroutines.delay(1500)
-        animate(
-            initialValue = pull,
-            targetValue = 0f,
-            animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessLow),
-        ) { value, _ -> pull = value }
-    }
-
     val reached = pull >= pullLimit * PullPhysics.TRIGGER
     LaunchedEffect(reached) {
         if (reached) haptics.threshold()

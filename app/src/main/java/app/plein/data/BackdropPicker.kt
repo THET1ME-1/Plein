@@ -63,7 +63,9 @@ class BackdropPicker(
             lastFailure = "включено «только Wi-Fi», а сеть мобильная"
             return null
         }
+        // Викисклад молчит — не сдаёмся во вшитые кадры, идём в Openverse.
         return wikimedia.next(dark = dark, screenWidth = screenWidth, onProgress = onProgress)
+            ?: source.next(dark, onProgress = onProgress)
     }
 
     /**

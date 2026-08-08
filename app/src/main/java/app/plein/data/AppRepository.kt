@@ -45,6 +45,9 @@ class AppRepository(private val context: Context) {
     /** Значки держим в памяти: без кэша шторка мигает на каждом открытии. */
     private val iconCache = LruCache<String, ImageBitmap>(512)
 
+    /** И на диске: память не переживает убийство процесса, а отрисовка дорога. */
+    private val diskCache = IconDiskCache(context)
+
     /**
      *LauncherActivityInfo по ключу.
      *
@@ -53,14 +56,15 @@ class AppRepository(private val context: Context) {
      */
     private val activityInfos = HashMap<String, android.content.pm.LauncherActivityInfo>()
 
-    private val collator: Collator = Collator.getInstance(Locale("ru")).apply {
+    /** Порядок букв берём у языка интерфейса, а не у русского алфавита всегда. */
+    private val collator: Collator = Collator.getInstance(Locale.getDefault()).apply {
         strength = Collator.PRIMARY
     }
 
     private val callback = object : LauncherApps.Callback() {
-        override fun onPackageRemoved(packageName: String, user: UserHandle) = refreshBlocking()
-        override fun onPackageAdded(packageName: String, user: UserHandle) = refreshBlocking()
-        override fun onPackageChanged(packageName: String, user: UserHandle) = refreshBlocking()
+        override fun onPackageRemoved(packageName: String, user: UserHandle) = forget(packageName)
+        override fun onPackageAdded(packageName: String, user: UserHandle) = forget(packageName)
+        override fun onPackageChanged(packageName: String, user: UserHandle) = forget(packageName)
         override fun onPackagesAvailable(names: Array<out String>, user: UserHandle, replacing: Boolean) = refreshBlocking()
         override fun onPackagesUnavailable(names: Array<out String>, user: UserHandle, replacing: Boolean) = refreshBlocking()
     }
@@ -68,6 +72,19 @@ class AppRepository(private val context: Context) {
     fun start() = launcherApps.registerCallback(callback)
 
     fun stop() = launcherApps.unregisterCallback(callback)
+
+    /**
+     * Приложение обновилось — старая картинка врёт.
+     *
+     * Чистим оба кэша по имени пакета: ключ значка начинается с компонента,
+     * поэтому в памяти хватает отбора по префиксу.
+     */
+    private fun forget(packageName: String) {
+        val prefix = "$packageName/"
+        iconCache.snapshot().keys.forEach { key -> if (key.startsWith(prefix)) iconCache.remove(key) }
+        diskCache.forget(packageName)
+        refreshBlocking()
+    }
 
     suspend fun refresh() = withContext(Dispatchers.IO) { refreshBlocking() }
 
@@ -132,6 +149,13 @@ class AppRepository(private val context: Context) {
         val cacheKey = cacheKeyOf(entry, sizePx, shapeKey) + "@" + iconPack
         iconCache.get(cacheKey)?.let { return@withContext it }
 
+        val packageName = entry.component.packageName
+        diskCache.read(packageName, cacheKey)?.let { stored ->
+            val restored = stored.asImageBitmap()
+            iconCache.put(cacheKey, restored)
+            return@withContext restored
+        }
+
         // Пак имеет приоритет: если для приложения там есть картинка, берём её.
         val fromPack = if (iconPack.isEmpty()) null else iconPacks.icon(iconPack, entry.component)
         val info = synchronized(activityInfos) { activityInfos[entry.key] }
@@ -139,7 +163,9 @@ class AppRepository(private val context: Context) {
             info?.getIcon(context.resources.displayMetrics.densityDpi)
         }.getOrNull() ?: return@withContext null
 
-        val bitmap = renderIcon(drawable, sizePx, shapePath).asImageBitmap()
+        val rendered = renderIcon(drawable, sizePx, shapePath)
+        diskCache.write(packageName, cacheKey, rendered)
+        val bitmap = rendered.asImageBitmap()
         iconCache.put(cacheKey, bitmap)
         bitmap
     }
@@ -205,6 +231,9 @@ class AppRepository(private val context: Context) {
                 }
             }.awaitAll()
         }
+        // Лишние файлы сносим после прогрева: смена формы или сетки оставляет
+        // на диске целый мёртвый набор.
+        diskCache.trim()
     }
 
     fun launch(entry: AppEntry) {
@@ -238,7 +267,66 @@ class AppRepository(private val context: Context) {
 
     fun shortcutsSupported(): Boolean = runCatching { launcherApps.hasShortcutHostPermission() }.getOrDefault(false)
 
+    /**
+     * Быстрые действия приложения: «Новое письмо», «Позвонить маме».
+     *
+     * Система отдаёт их только домашнему экрану по умолчанию, у остальных
+     * getShortcuts бросает SecurityException. Поэтому пустой список здесь
+     * означает и «нет действий», и «мы пока не лаунчер» — раздел просто скрыт.
+     */
+    suspend fun shortcuts(entry: AppEntry, sizePx: Int): List<AppShortcut> = withContext(Dispatchers.IO) {
+        if (!shortcutsSupported()) return@withContext emptyList()
+
+        val query = LauncherApps.ShortcutQuery()
+            .setPackage(entry.component.packageName)
+            .setQueryFlags(
+                LauncherApps.ShortcutQuery.FLAG_MATCH_MANIFEST or
+                    LauncherApps.ShortcutQuery.FLAG_MATCH_DYNAMIC or
+                    LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED
+            )
+        val found = runCatching { launcherApps.getShortcuts(query, entry.user) }
+            .getOrNull().orEmpty()
+
+        found
+            // У приложения с несколькими значками в меню чужие действия не нужны.
+            .filter { it.activity == null || it.activity == entry.component }
+            .filter { it.isEnabled }
+            // Манифестные идут первыми: их порядок задал разработчик.
+            .sortedWith(compareBy({ !it.isDeclaredInManifest }, { it.rank }))
+            .take(MAX_SHORTCUTS)
+            .map { info ->
+                val label = (info.longLabel ?: info.shortLabel ?: "").toString()
+                val icon = runCatching {
+                    launcherApps.getShortcutIconDrawable(info, context.resources.displayMetrics.densityDpi)
+                }.getOrNull()?.let { renderIcon(it, sizePx, circlePath(sizePx)).asImageBitmap() }
+                AppShortcut(id = info.id, label = label, icon = icon, info = info)
+            }
+            .filter { it.label.isNotBlank() }
+    }
+
+    fun startShortcut(shortcut: AppShortcut) {
+        runCatching {
+            launcherApps.startShortcut(shortcut.info, null, null)
+        }
+    }
+
+    /** Значок действия всегда круглый: форма настроек тут читалась бы как ошибка. */
+    private fun circlePath(sizePx: Int): android.graphics.Path =
+        android.graphics.Path().apply {
+            addCircle(sizePx / 2f, sizePx / 2f, sizePx / 2f, android.graphics.Path.Direction.CW)
+        }
+
     companion object {
+        private const val MAX_SHORTCUTS = 5
+
         fun componentOf(pkg: String, cls: String) = ComponentName(pkg, cls)
     }
 }
+
+/** Быстрое действие приложения в том виде, в каком его показывает меню. */
+class AppShortcut(
+    val id: String,
+    val label: String,
+    val icon: ImageBitmap?,
+    internal val info: android.content.pm.ShortcutInfo,
+)

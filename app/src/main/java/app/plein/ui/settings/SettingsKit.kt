@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -240,3 +242,69 @@ fun <T> SegmentedPill(
 }
 
 typealias ColumnScope = androidx.compose.foundation.layout.ColumnScope
+
+/**
+ * Поле поиска.
+ *
+ * Пилюля с заливкой и без единой линии: обводок в лаунчере нет нигде, а
+ * `OutlinedTextField` рисовал рамку, которая била по всем остальным экранам.
+ */
+@Composable
+fun PlainSearchField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    modifier: Modifier = Modifier,
+) {
+    PlainField(
+        value = value,
+        onValueChange = onValueChange,
+        placeholder = placeholder,
+        shape = CircleShape,
+        leading = {
+            Icon(
+                Icons.Rounded.Search,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
+        },
+        modifier = modifier,
+    )
+}
+
+/** Поле ввода: имя папки, своё название приложения. Тоже без рамки. */
+@Composable
+fun PlainField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(22.dp),
+    leading: (@Composable () -> Unit)? = null,
+    modifier: Modifier = Modifier,
+) {
+    androidx.compose.material3.TextField(
+        value = value,
+        onValueChange = onValueChange,
+        singleLine = true,
+        shape = shape,
+        leadingIcon = leading,
+        placeholder = {
+            Text(
+                text = placeholder,
+                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        },
+        colors = androidx.compose.material3.TextFieldDefaults.colors(
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent,
+            disabledIndicatorColor = Color.Transparent,
+            errorIndicatorColor = Color.Transparent,
+            cursorColor = MaterialTheme.colorScheme.primary,
+        ),
+        modifier = modifier,
+    )
+}

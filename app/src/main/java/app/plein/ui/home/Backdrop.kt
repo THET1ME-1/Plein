@@ -81,8 +81,10 @@ fun Backdrop(
     val context = LocalContext.current
     var photo by remember(backdrop.key) { mutableStateOf<ImageBitmap?>(null) }
 
-    // Каждая смена кадра рисует свою фигуру и растекается ею в прямоугольник.
-    val morph = remember(backdrop.key) { MorphReveal.randomMorph() }
+    // Фигура заготовлена заранее: она крутится знаком загрузки, ею же
+    // растекается пришедший кадр, и только после этого берётся следующая.
+    // Иначе человек тянул одну форму, а на экран выезжала другая.
+    var morph by remember { mutableStateOf(MorphReveal.randomMorph()) }
     val reveal = remember(backdrop.key) { Animatable(0f) }
 
     LaunchedEffect(backdrop.key) {
@@ -101,6 +103,7 @@ fun Backdrop(
         val seed = withContext(Dispatchers.Default) { PhotoPalette.seedFrom(decoded) }
         onSeedExtracted(seed)
         reveal.animateTo(1f, tween(650, easing = EmphasizedDecelerate))
+        morph = MorphReveal.randomMorph()
     }
 
     val time = remember(twentyFour) {
@@ -113,8 +116,11 @@ fun Backdrop(
         else -> 40.sp
     }
     val clockFamily = if (clockFont.isEmpty()) MonoFont else googleFontFamily(clockFont)
-    val date = remember {
-        SimpleDateFormat("EEE, d MMM", Locale("ru")).format(Date()).uppercase(Locale("ru"))
+    // Дата берёт язык интерфейса: раньше стояла русская локаль, и англичанин
+    // видел «ПТ, 8 АВГ».
+    val locale = Locale.getDefault()
+    val date = remember(locale) {
+        SimpleDateFormat("EEE, d MMM", locale).format(Date()).uppercase(locale)
     }
 
     Box(
@@ -153,15 +159,19 @@ fun Backdrop(
                 )
         )
 
-        if (pull > 0.02f) {
-            // Кружок растёт под пальцем: дошёл до полного — придёт новый кадр.
-            Box(
-                Modifier
+        if (pull > 0.02f || loading) {
+            // Фигура растёт под пальцем и доворачивается; дотянул до полного —
+            // она крутится, пока едет кадр, и им же растекается по экрану.
+            val reach = pull.coerceAtMost(1f)
+            MorphSpinner(
+                morph = morph,
+                size = if (loading) 46.dp else (26 + 22 * reach).dp,
+                color = Color.White.copy(alpha = if (loading) 0.85f else 0.35f + 0.5f * reach),
+                spinning = loading,
+                turn = reach * 140f,
+                modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .padding(top = 96.dp)
-                    .size((22 + 22 * pull.coerceAtMost(1f)).dp)
-                    .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.25f + 0.45f * pull.coerceAtMost(1f))),
+                    .padding(top = 92.dp),
             )
         }
 
@@ -173,11 +183,8 @@ fun Backdrop(
         ) {
             GlassButton(onClick = onShuffle, description = stringResource(R.string.another_backdrop)) {
                 if (loading) {
-                    androidx.compose.material3.CircularProgressIndicator(
-                        color = Color.White,
-                        strokeWidth = 2.dp,
-                        modifier = Modifier.size(18.dp),
-                    )
+                    // Та же фигура, что и на кадре: одна пластика на весь экран.
+                    MorphSpinner(morph = morph, size = 18.dp, color = Color.White, spinning = true)
                 } else {
                     Icon(Icons.Rounded.Refresh, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
                 }

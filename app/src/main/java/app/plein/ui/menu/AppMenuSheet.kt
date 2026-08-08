@@ -1,5 +1,6 @@
 package app.plein.ui.menu
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -26,7 +27,6 @@ import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -35,11 +35,13 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -49,8 +51,11 @@ import androidx.compose.ui.unit.sp
 import app.plein.R
 import app.plein.data.AppEntry
 import app.plein.data.AppRepository
+import app.plein.data.AppShortcut
 import app.plein.data.FolderConfig
+import app.plein.data.displayTitle
 import app.plein.ui.home.AppIcon
+import app.plein.ui.settings.PlainField
 import app.plein.ui.theme.MonoFont
 
 /**
@@ -73,6 +78,13 @@ fun AppMenuSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var renaming by remember { mutableStateOf(false) }
     var draft by remember(entry.key) { mutableStateOf(entry.title) }
+
+    // Быстрые действия спрашиваем у системы при открытии листа: держать их
+    // заранее бессмысленно, приложение меняет их когда захочет.
+    val iconPx = with(LocalDensity.current) { 22.dp.roundToPx() }
+    val shortcuts by produceState(initialValue = emptyList<AppShortcut>(), entry.key) {
+        value = repository.shortcuts(entry, iconPx)
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -104,12 +116,10 @@ fun AppMenuSheet(
             }
 
             if (renaming) {
-                OutlinedTextField(
+                PlainField(
                     value = draft,
                     onValueChange = { draft = it },
-                    label = { Text(stringResource(R.string.app_custom_name)) },
-                    singleLine = true,
-                    shape = RoundedCornerShape(18.dp),
+                    placeholder = stringResource(R.string.app_custom_name),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp),
@@ -124,6 +134,36 @@ fun AppMenuSheet(
                     TextButton(onClick = { onRename(draft); renaming = false }) { Text(stringResource(R.string.save)) }
                 }
             } else {
+                if (shortcuts.isNotEmpty()) {
+                    SectionLabel(stringResource(R.string.shortcuts))
+                    shortcuts.forEach { shortcut ->
+                        MenuRow(
+                            title = shortcut.label,
+                            onClick = {
+                                repository.startShortcut(shortcut)
+                                onDismiss()
+                            },
+                            leading = {
+                                val bitmap = shortcut.icon
+                                if (bitmap != null) {
+                                    Image(
+                                        bitmap = bitmap,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp),
+                                    )
+                                } else {
+                                    Icon(
+                                        Icons.Rounded.OpenInNew,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(20.dp),
+                                    )
+                                }
+                            },
+                        )
+                    }
+                }
+
                 SectionLabel(stringResource(R.string.app_section))
                 MenuRow(Icons.Rounded.SwapHoriz, stringResource(R.string.reorder), stringResource(R.string.reorder_hint), onClick = onStartReorder)
                 MenuRow(Icons.Rounded.DriveFileRenameOutline, stringResource(R.string.app_custom_name), stringResource(R.string.app_custom_name_hint), onClick = { renaming = true })
@@ -151,7 +191,7 @@ fun AppMenuSheet(
                     val inside = folder.id in memberOf
                     MenuRow(
                         icon = if (inside) Icons.Rounded.Check else Icons.Rounded.FolderOpen,
-                        title = folder.title,
+                        title = folder.displayTitle(),
                         subtitle = if (inside) stringResource(R.string.in_folder) else stringResource(R.string.add_to_folder),
                         highlighted = inside,
                         onClick = { onToggleFolder(folder.id) },
@@ -174,6 +214,7 @@ private fun SectionLabel(text: String) {
     )
 }
 
+/** Строка с системным значком: почти все пункты меню такие. */
 @Composable
 private fun MenuRow(
     icon: ImageVector,
@@ -182,6 +223,37 @@ private fun MenuRow(
     highlighted: Boolean = false,
     danger: Boolean = false,
     onClick: () -> Unit,
+) {
+    MenuRow(
+        title = title,
+        subtitle = subtitle,
+        highlighted = highlighted,
+        danger = danger,
+        onClick = onClick,
+        leading = {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = when {
+                    danger -> MaterialTheme.colorScheme.error
+                    highlighted -> MaterialTheme.colorScheme.onPrimaryContainer
+                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                modifier = Modifier.size(20.dp),
+            )
+        },
+    )
+}
+
+/** Строка со своим значком: быстрые действия приходят с картинкой приложения. */
+@Composable
+private fun MenuRow(
+    title: String,
+    subtitle: String? = null,
+    highlighted: Boolean = false,
+    danger: Boolean = false,
+    onClick: () -> Unit,
+    leading: @Composable () -> Unit,
 ) {
     Surface(
         color = if (highlighted) MaterialTheme.colorScheme.primaryContainer
@@ -197,16 +269,7 @@ private fun MenuRow(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
         ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = when {
-                    danger -> MaterialTheme.colorScheme.error
-                    highlighted -> MaterialTheme.colorScheme.onPrimaryContainer
-                    else -> MaterialTheme.colorScheme.onSurfaceVariant
-                },
-                modifier = Modifier.size(20.dp),
-            )
+            leading()
             Column(Modifier.padding(start = 14.dp)) {
                 Text(
                     text = title,

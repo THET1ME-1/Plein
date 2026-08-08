@@ -21,7 +21,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -32,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -70,20 +70,19 @@ fun FontPickerSheet(
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(start = 22.dp, bottom = 12.dp),
             )
-            OutlinedTextField(
+            PlainSearchField(
                 value = query,
                 onValueChange = { query = it },
-                singleLine = true,
-                shape = CircleShape,
-                leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
-                placeholder = { Text(stringResource(R.string.font_search_hint)) },
+                placeholder = stringResource(R.string.font_search_hint),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 18.dp),
+                    .padding(horizontal = 16.dp),
             )
             LazyColumn(
                 contentPadding = PaddingValues(top = 10.dp, bottom = 24.dp),
-                modifier = Modifier.height(420.dp),
+                // Ростом от экрана: на маленьком телефоне жёсткие 420 упирались
+                // в системные кнопки.
+                modifier = Modifier.height((LocalConfiguration.current.screenHeightDp * 0.52f).dp),
             ) {
                 item {
                     FontRow(

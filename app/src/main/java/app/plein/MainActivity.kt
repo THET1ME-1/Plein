@@ -112,6 +112,21 @@ class MainActivity : ComponentActivity() {
             }
             val scope = rememberCoroutineScope()
 
+            // Один запрос за раз: пока кадр едет, кнопка и жест молчат. Иначе
+            // два ответа подряд перебивали друг друга, а индикатор не гас.
+            val loadBackdrop: () -> Unit = {
+                if (!loadingBackdrop) {
+                    scope.launch {
+                        loadingBackdrop = true
+                        try {
+                            backdrop = backdropSource.next(dark) ?: Backdrops.next(backdrop, dark)
+                        } finally {
+                            loadingBackdrop = false
+                        }
+                    }
+                }
+            }
+
             // Роль запрашивается через результат: startActivity системный диалог
             // показывает не всегда, а вернуться надо с обновлённым состоянием.
             val roleLauncher = rememberLauncherForActivityResult(
@@ -162,13 +177,7 @@ class MainActivity : ComponentActivity() {
                     backdrop = backdrop,
                     weatherTemp = weatherTemp,
                     weatherCode = weatherCode,
-                    onPullRefresh = {
-                        scope.launch {
-                            loadingBackdrop = true
-                            backdrop = backdropSource.next(dark) ?: Backdrops.next(backdrop, dark)
-                            loadingBackdrop = false
-                        }
-                    },
+                    onPullRefresh = loadBackdrop,
                     onWeatherClick = {
                         val pkg = prefs.weatherApp
                         if (pkg.isNotEmpty()) {
@@ -177,16 +186,8 @@ class MainActivity : ComponentActivity() {
                         }
                     },
                     editing = editing,
-                    onShuffleBackdrop = {
-                        // Каждое нажатие идёт в фотобанк за новым кадром;
-                        // без сети остаются вшитые.
-                        scope.launch {
-                            loadingBackdrop = true
-                            val fresh = backdropSource.next(dark)
-                            backdrop = fresh ?: Backdrops.next(backdrop, dark)
-                            loadingBackdrop = false
-                        }
-                    },
+                    // Нажатие идёт в фотобанк за новым кадром; без сети остаются вшитые.
+                    onShuffleBackdrop = loadBackdrop,
                     loadingBackdrop = loadingBackdrop,
                     onSeedExtracted = { seed = it },
                     onOpenSearch = { screen = Screen.Search },

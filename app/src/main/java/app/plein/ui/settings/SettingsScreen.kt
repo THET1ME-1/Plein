@@ -21,8 +21,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Button
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -67,6 +65,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.plein.R
 import app.plein.data.FolderConfig
+import app.plein.data.displayTitle
 import app.plein.data.Prefs
 import app.plein.ui.icons.IconShape
 
@@ -101,6 +100,7 @@ fun SettingsScreen(
     var renamingId by remember { mutableStateOf<String?>(null) }
     var draft by remember { mutableStateOf("") }
     val context = androidx.compose.ui.platform.LocalContext.current
+    val installed by repository.apps.collectAsState()
 
     Box(
         Modifier
@@ -315,7 +315,11 @@ fun SettingsScreen(
                     SettingsRow(
                         icon = Icons.Rounded.Cloud,
                         title = stringResource(R.string.weather_app),
-                        subtitle = prefs.weatherApp.ifEmpty { stringResource(R.string.weather_app_hint) },
+                        // Показываем название, а не пакет: «com.miui.weather2» в
+                        // настройках читалось как ошибка.
+                        subtitle = installed.firstOrNull { it.component.packageName == prefs.weatherApp }
+                            ?.title
+                            ?: stringResource(R.string.weather_app_hint),
                         place = RowPlace.Middle,
                         onClick = { pickingWeatherApp = true },
                     )
@@ -326,10 +330,19 @@ fun SettingsScreen(
                             onSelect = { prefs.updatePageIndicator(it) },
                             content = { value, active ->
                                 Text(
-                                    text = value,
+                                    text = stringResource(
+                                        when (value) {
+                                            "bar" -> R.string.indicator_bar
+                                            "numbers" -> R.string.indicator_numbers
+                                            "none" -> R.string.indicator_none
+                                            else -> R.string.indicator_dots
+                                        }
+                                    ),
                                     style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp),
                                     color = if (active) MaterialTheme.colorScheme.onPrimary
                                     else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
                                 )
                             },
                         )
@@ -388,9 +401,10 @@ fun SettingsScreen(
             item {
                 SettingsSection(stringResource(R.string.folders)) {
                     folders.forEachIndexed { index, folder ->
+                        val folderTitle = folder.displayTitle()
                         SettingsRow(
                             icon = Icons.Rounded.Folder,
-                            title = if (folder.isAll) stringResource(R.string.all_apps) else folder.title,
+                            title = folderTitle,
                             subtitle = if (folder.isAll) stringResource(R.string.all_installed)
                             else stringResource(R.string.apps_count, folder.appKeys.size),
                             place = if (index == 0) RowPlace.First else RowPlace.Middle,
@@ -405,7 +419,7 @@ fun SettingsScreen(
                                     if (!folder.isAll) {
                                         IconAction(Icons.Rounded.DriveFileRenameOutline, stringResource(R.string.rename)) {
                                             renamingId = folder.id
-                                            draft = folder.title
+                                            draft = folderTitle
                                         }
                                         IconAction(Icons.Rounded.Delete, stringResource(R.string.delete), danger = true) {
                                             onDeleteFolder(folder.id)
@@ -471,13 +485,13 @@ fun SettingsScreen(
     }
 
     if (pickingWeatherApp) {
-        val apps = repository.apps.collectAsState().value
-        ChoiceSheet(
+        AppPickerSheet(
             title = stringResource(R.string.weather_app),
-            options = listOf("" to stringResource(R.string.weather_app_hint)) +
-                apps.map { it.component.packageName to it.title }.distinctBy { it.first },
+            apps = installed,
+            repository = repository,
+            iconShape = prefs.iconShape,
+            iconPack = prefs.iconPack,
             selected = prefs.weatherApp,
-            searchable = true,
             onPick = { prefs.updateWeatherApp(it) },
             onDismiss = { pickingWeatherApp = false },
         )
@@ -555,7 +569,7 @@ private fun ShapeCell(option: IconShape, selected: Boolean, onClick: () -> Unit)
                 )
         )
         Text(
-            text = option.title,
+            text = stringResource(option.titleRes),
             fontSize = 10.5.sp,
             lineHeight = 12.sp,
             color = if (selected) MaterialTheme.colorScheme.primary
@@ -594,11 +608,10 @@ private fun NameSheet(
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(bottom = 14.dp),
             )
-            OutlinedTextField(
+            PlainField(
                 value = value,
                 onValueChange = onValueChange,
-                singleLine = true,
-                shape = RoundedCornerShape(18.dp),
+                placeholder = title,
                 modifier = Modifier.fillMaxWidth(),
             )
             Row(
@@ -607,7 +620,7 @@ private fun NameSheet(
                     .fillMaxWidth()
                     .padding(top = 16.dp),
             ) {
-                androidx.compose.material3.OutlinedButton(
+                androidx.compose.material3.FilledTonalButton(
                     onClick = onDismiss,
                     shape = CircleShape,
                     modifier = Modifier.weight(1f).height(56.dp),
@@ -654,16 +667,13 @@ private fun ChoiceSheet(
                 modifier = Modifier.padding(start = 22.dp, bottom = 10.dp),
             )
             if (searchable) {
-                OutlinedTextField(
+                PlainSearchField(
                     value = query,
                     onValueChange = { query = it },
-                    singleLine = true,
-                    shape = CircleShape,
-                    leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
-                    placeholder = { Text(stringResource(R.string.search_hint)) },
+                    placeholder = stringResource(R.string.search_hint),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 18.dp, vertical = 6.dp),
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
                 )
             }
             LazyColumn(Modifier.height(430.dp)) {

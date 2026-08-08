@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -59,6 +58,7 @@ import app.plein.data.AppEntry
 import app.plein.data.AppRepository
 import app.plein.data.Backdrop
 import app.plein.data.FolderConfig
+import app.plein.data.displayTitle
 import app.plein.data.Prefs
 import app.plein.ui.theme.Emphasized
 import app.plein.ui.theme.MonoFont
@@ -132,14 +132,22 @@ fun HomeScreen(
                 source: NestedScrollSource,
             ): Offset {
                 // Тянем вниз на развёрнутой шапке — копим ход под новый кадр.
-                if (shift <= 0f && available.y > 0f) {
+                // Только под пальцем: на инерции список сам долетает до верха,
+                // и весь остаток хода набирал полный круг без всякого жеста.
+                if (source == NestedScrollSource.UserInput && shift <= 0f && available.y > 0f) {
                     pull = (pull + available.y * 0.5f).coerceAtMost(pullLimit)
                 }
                 return Offset.Zero
             }
 
             override suspend fun onPreFling(available: Velocity): Velocity {
-                if (pull >= pullLimit * 0.75f) onPullRefresh()
+                if (pull >= pullLimit) onPullRefresh()
+                pull = 0f
+                return Velocity.Zero
+            }
+
+            /** Инерция кончилась — гасим круг. Иначе он застывал на кадре. */
+            override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
                 pull = 0f
                 return Velocity.Zero
             }
@@ -212,7 +220,7 @@ fun HomeScreen(
 
                     Column(Modifier.fillMaxSize()) {
                         FolderHeader(
-                            title = if (config.isAll) stringResource(R.string.all_apps) else folder.title,
+                            title = config.displayTitle(),
                             page = index + 1,
                             pages = pages,
                             count = folder.apps.size,
@@ -313,7 +321,8 @@ private fun FolderHeader(
 
 @Composable
 private fun PageIndicator(style: String, pages: Int, current: Int) {
-    if (style == "none") {
+    // Одна страница — показывать нечего ни точками, ни полосой, ни «1 / 1».
+    if (style == "none" || pages < 2) {
         Spacer(Modifier.height(12.dp))
         return
     }
@@ -331,6 +340,14 @@ private fun PageIndicator(style: String, pages: Int, current: Int) {
         return
     }
     if (style == "bar") {
+        // Ход считаем анимацией, а не прыжком по страницам: полоса едет вместе
+        // со свайпом. Сдвиг стоит в цепочке до заливки — иначе слой двигает
+        // пустоту, а закрашенный прямоугольник остаётся на месте.
+        val travel by animateFloatAsState(
+            targetValue = current.toFloat(),
+            animationSpec = tween(durationMillis = 280, easing = Emphasized),
+            label = "indicator",
+        )
         Box(
             Modifier
                 .fillMaxWidth()
@@ -341,12 +358,11 @@ private fun PageIndicator(style: String, pages: Int, current: Int) {
         ) {
             Box(
                 Modifier
-                    .fillMaxWidth(1f / pages.coerceAtLeast(1))
+                    .fillMaxWidth(1f / pages)
                     .fillMaxHeight()
-                    .offset(x = 0.dp)
+                    .graphicsLayer { translationX = size.width * travel }
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.primary)
-                    .graphicsLayer { translationX = size.width * current }
             )
         }
         return

@@ -604,7 +604,7 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                         // меняется, погода та же, что на кадре.
                         when (kind) {
                             app.plein.ui.home.Tiles.CLOCK -> {
-                                val now = java.util.Date()
+                                val now = app.plein.ui.home.rememberNow()
                                 val locale = java.util.Locale.getDefault()
                                 app.plein.ui.home.ClockTile(
                                     time = java.text.SimpleDateFormat(

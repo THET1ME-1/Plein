@@ -60,7 +60,6 @@ import app.plein.ui.theme.googleFontFamily
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 
 /**
@@ -110,8 +109,10 @@ fun Backdrop(
         reveal.animateTo(1f, tween(650, easing = EmphasizedDecelerate))
     }
 
-    val time = remember(twentyFour) {
-        SimpleDateFormat(if (twentyFour) "HH:mm" else "h:mm a", Locale.getDefault()).format(Date())
+    // Время идёт само: система отбивает минуту, `remember` держал бы её вечно.
+    val now = rememberNow()
+    val time = remember(twentyFour, now) {
+        SimpleDateFormat(if (twentyFour) "HH:mm" else "h:mm a", Locale.getDefault()).format(now)
     }
     val clockFontSize = when (clockSize) {
         "s" -> 30.sp
@@ -123,8 +124,8 @@ fun Backdrop(
     // Дата берёт язык интерфейса: раньше стояла русская локаль, и англичанин
     // видел «ПТ, 8 АВГ».
     val locale = Locale.getDefault()
-    val date = remember(locale) {
-        SimpleDateFormat("EEE, d MMM", locale).format(Date()).uppercase(locale)
+    val date = remember(locale, now) {
+        SimpleDateFormat("EEE, d MMM", locale).format(now).uppercase(locale)
     }
 
     Box(

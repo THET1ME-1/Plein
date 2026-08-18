@@ -252,4 +252,8 @@
     <string name="tile_media">Música</string>
     <string name="media_allow">Permitir acceso a las notificaciones</string>
     <string name="media_silence">No suena nada</string>
+    <string name="auto_folders">Carpetas por categoría</string>
+    <string name="auto_folder_empty">todavía sin aplicaciones</string>
+    <string name="folder_now">Ahora</string>
+    <string name="folder_now_hint">lo que abres a esta hora</string>
 </resources>

@@ -98,6 +98,9 @@ fun SettingsScreen(
     onRenameFolder: (String, String) -> Unit,
     onDeleteFolder: (String) -> Unit,
     onMoveFolder: (Int, Int) -> Unit,
+    autoFolderOn: (String) -> Boolean,
+    autoFolderCount: (String) -> Int,
+    onAutoFolder: (String, Boolean) -> Unit,
     onExportBackup: () -> Unit,
     onImportBackup: () -> Unit,
     backdropFailure: String? = null,
@@ -523,6 +526,37 @@ fun SettingsScreen(
                         chipBackground = MaterialTheme.colorScheme.tertiaryContainer,
                         onClick = { creating = true; draft = "" },
                     )
+                }
+            }
+
+            item {
+                SettingsSection(stringResource(R.string.auto_folders)) {
+                    // Папка по категории живёт правилом: новое приложение
+                    // ложится в неё само, удалённое уходит. Ничего этого не
+                    // происходит, пока человек сам не включит нужную.
+                    // «Сейчас» стоит первой: она не про вид приложения, а
+                    // про время суток, и работает без всякой настройки.
+                    SettingsToggleRow(
+                        icon = Icons.Rounded.Schedule,
+                        title = stringResource(R.string.folder_now),
+                        subtitle = stringResource(R.string.folder_now_hint),
+                        checked = autoFolderOn(app.plein.data.FolderTitles.NOW),
+                        place = RowPlace.First,
+                        onCheckedChange = { onAutoFolder(app.plein.data.FolderTitles.NOW, it) },
+                    )
+                    val kinds = app.plein.data.FolderStore.CATEGORIES
+                    kinds.forEachIndexed { index, (_, key) ->
+                        val count = autoFolderCount(key)
+                        SettingsToggleRow(
+                            icon = Icons.Rounded.Folder,
+                            title = stringResource(app.plein.data.FolderTitles.resOf(key)),
+                            subtitle = if (count == 0) stringResource(R.string.auto_folder_empty)
+                            else stringResource(R.string.apps_count, count),
+                            checked = autoFolderOn(key),
+                            place = if (index == kinds.lastIndex) RowPlace.Last else RowPlace.Middle,
+                            onCheckedChange = { onAutoFolder(key, it) },
+                        )
+                    }
                 }
             }
 

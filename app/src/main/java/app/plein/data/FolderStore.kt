@@ -27,6 +27,10 @@ data class FolderConfig(
     val appKeys: List<String>,
     val isAll: Boolean = false,
     val titleKey: String? = null,
+    /** Ключ категории, если папку ведёт правило. Пусто — папка ручная. */
+    val rule: String? = null,
+    /** Что человек вынул из живой папки руками: правило это уважает. */
+    val removed: List<String> = emptyList(),
 ) {
     fun resolve(all: List<AppEntry>): Folder {
         val byKey = all.associateBy { it.key }
@@ -55,25 +59,105 @@ class FolderStore(private val context: Context) {
         }
     }
 
-    /** Первый запуск: раскладываем по категориям, дальше человек правит руками. */
+    /**
+     * Первый запуск: заводим только «Все приложения».
+     *
+     * Раньше лаунчер сам раскладывал папки по категориям, и человек получал
+     * чужую структуру, которую надо разбирать. Теперь папки по категориям
+     * включаются поштучно в настройках.
+     */
     fun seedIfEmpty(apps: List<AppEntry>) {
         if (folders.isNotEmpty() || apps.isEmpty()) return
-        val seeded = mutableListOf(
-            FolderConfig(ALL_ID, context.getString(R.string.all_apps), emptyList(), isAll = true)
+        folders.add(FolderConfig(ALL_ID, context.getString(R.string.all_apps), emptyList(), isAll = true))
+        persist()
+    }
+
+    /** Сколько приложений попадёт в папку категории: показываем в настройках. */
+    fun countFor(key: String, apps: List<AppEntry>, stats: LaunchStats? = null): Int =
+        matchingFor(key, apps, stats).size
+
+    fun ruled(key: String): FolderConfig? = folders.firstOrNull { it.rule == key }
+
+    /**
+     * Включить или выключить папку категории.
+     *
+     * Выключение стирает папку целиком: она собиралась правилом, своего в ней
+     * ничего нет. Приложения при этом никуда не деваются, они и так все лежат
+     * в «Всех приложениях».
+     */
+    fun setCategoryFolder(key: String, enabled: Boolean, apps: List<AppEntry>, stats: LaunchStats? = null) {
+        val existing = ruled(key)
+        if (!enabled) {
+            existing?.let { folders.remove(it) }
+            persist()
+            return
+        }
+        if (existing != null) return
+        folders.add(
+            FolderConfig(
+                id = newId(),
+                title = context.getString(FolderTitles.resOf(key)),
+                appKeys = matchingFor(key, apps, stats),
+                titleKey = key,
+                rule = key,
+            )
         )
-        CATEGORIES.forEach { (category, key) ->
-            val inCategory = apps.filter { it.category == category }
-            if (inCategory.size >= MIN_APPS) {
-                seeded += FolderConfig(
-                    id = newId(),
-                    title = context.getString(FolderTitles.resOf(key)),
-                    appKeys = inCategory.map { it.key },
-                    titleKey = key,
+        persist()
+    }
+
+    /**
+     * Пересобрать живые папки под нынешний набор приложений.
+     *
+     * Зовётся при каждом изменении списка: поставили приложение — оно легло
+     * в свою папку, удалили — ушло. Ручные папки не трогаем вовсе.
+     */
+    fun syncRules(apps: List<AppEntry>, stats: LaunchStats? = null) {
+        if (apps.isEmpty()) return
+        var changed = false
+        folders.forEachIndexed { index, folder ->
+            val key = folder.rule ?: return@forEachIndexed
+            val matching = matchingFor(key, apps, stats)
+            // «Сейчас» описывает привычку целиком, поэтому состав у неё
+            // задаёт правило, а не прежний набор: час сменился — сменилась и
+            // папка. У категорий наоборот, там ручная расстановка важнее.
+            val next = if (key == FolderTitles.NOW) {
+                matching.filterNot { it in folder.removed }
+            } else {
+                FolderRules.apply(
+                    current = folder.appKeys,
+                    matching = matching,
+                    removed = folder.removed.toSet(),
+                    keepStrangers = true,
                 )
             }
+            if (next != folder.appKeys) {
+                folders[index] = folder.copy(appKeys = next)
+                changed = true
+            }
         }
-        folders.addAll(seeded)
-        persist()
+        if (changed) persist()
+    }
+
+    private fun categoryOf(key: String): Int? = CATEGORIES.firstOrNull { it.second == key }?.first
+
+    /** Кто попадает в папку по её правилу. */
+    private fun matchingFor(key: String, apps: List<AppEntry>, stats: LaunchStats?): List<String> {
+        if (key == FolderTitles.NOW) {
+            val counter = stats ?: return emptyList()
+            val hour = counter.nowHour()
+            val keys = apps.map { it.key }.toSet()
+            return NowFolder.pick(
+                apps.map { entry ->
+                    NowFolder.Candidate(
+                        key = entry.key,
+                        atHour = counter.launchesAt(entry.key, hour),
+                        total = counter.launches(entry.key),
+                    )
+                }
+            ).filter { it in keys }
+        }
+        val category = categoryOf(key) ?: return emptyList()
+        return apps.filter { it.category == category }.map { it.key }
     }
 
     fun create(title: String) {
@@ -116,8 +200,15 @@ class FolderStore(private val context: Context) {
         val folder = folders[index]
         if (folder.isAll) return
         val keys = folder.appKeys.toMutableList()
-        if (!keys.remove(appKey)) keys.add(appKey)
-        folders[index] = folder.copy(appKeys = keys)
+        val taken = keys.remove(appKey)
+        if (!taken) keys.add(appKey)
+        // У живой папки помним, что вынесли руками: иначе правило вернёт
+        // приложение обратно на следующем же пересчёте.
+        val removed = folder.removed.toMutableList()
+        if (folder.rule != null) {
+            if (taken) removed += appKey else removed -= appKey
+        }
+        folders[index] = folder.copy(appKeys = keys, removed = removed.distinct())
         persist()
     }
 
@@ -134,6 +225,8 @@ class FolderStore(private val context: Context) {
                     put("isAll", folder.isAll)
                     put("apps", JSONArray(folder.appKeys))
                     folder.titleKey?.let { put("titleKey", it) }
+                    folder.rule?.let { put("rule", it) }
+                    if (folder.removed.isNotEmpty()) put("removed", JSONArray(folder.removed))
                 }
             )
         }
@@ -151,6 +244,10 @@ class FolderStore(private val context: Context) {
                 appKeys = (0 until keys.length()).map { keys.getString(it) },
                 isAll = item.optBoolean("isAll", false),
                 titleKey = item.optString("titleKey").ifEmpty { null },
+                rule = item.optString("rule").ifEmpty { null },
+                removed = item.optJSONArray("removed")?.let { list ->
+                    (0 until list.length()).map { list.getString(it) }
+                }.orEmpty(),
             )
         }
     }.getOrDefault(emptyList())
@@ -160,9 +257,8 @@ class FolderStore(private val context: Context) {
     companion object {
         const val ALL_ID = "all"
         private const val KEY_FOLDERS = "folders"
-        private const val MIN_APPS = 4
 
-        private val CATEGORIES = listOf(
+        val CATEGORIES = listOf(
             ApplicationInfo.CATEGORY_SOCIAL to FolderTitles.SOCIAL,
             ApplicationInfo.CATEGORY_AUDIO to FolderTitles.MUSIC,
             ApplicationInfo.CATEGORY_VIDEO to FolderTitles.VIDEO,
@@ -177,6 +273,9 @@ class FolderStore(private val context: Context) {
 /** Заголовки папок, которые лаунчер разложил сам. Ключ хранится, текст берётся из ресурсов. */
 object FolderTitles {
 
+    /** Живая папка «Сейчас»: собирается из привычки этого часа. */
+    const val NOW = "now"
+
     const val SOCIAL = "social"
     const val MUSIC = "music"
     const val VIDEO = "video"
@@ -187,6 +286,7 @@ object FolderTitles {
 
     @StringRes
     fun resOf(key: String): Int = when (key) {
+        NOW -> R.string.folder_now
         SOCIAL -> R.string.folder_social
         MUSIC -> R.string.folder_music
         VIDEO -> R.string.folder_video

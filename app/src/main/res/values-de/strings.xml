@@ -252,4 +252,8 @@
     <string name="tile_media">Musik</string>
     <string name="media_allow">Zugriff auf Mitteilungen erlauben</string>
     <string name="media_silence">Es läuft nichts</string>
+    <string name="auto_folders">Ordner nach Kategorie</string>
+    <string name="auto_folder_empty">noch keine Apps</string>
+    <string name="folder_now">Jetzt</string>
+    <string name="folder_now_hint">was Sie um diese Zeit öffnen</string>
 </resources>

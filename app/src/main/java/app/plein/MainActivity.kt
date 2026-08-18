@@ -471,7 +471,20 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                     ).show()
                 }
             }
-            LaunchedEffect(apps) { folderStore.seedIfEmpty(apps) }
+            // Час нужен папке «Сейчас»: сменился — состав пересобирается.
+            // Время только через rememberNow, иначе оно застынет на минуте
+            // запуска, как когда-то часы на кадре.
+            val folderNow = app.plein.ui.home.rememberNow()
+            val folderHour = remember(folderNow) {
+                java.util.Calendar.getInstance().apply { time = folderNow }
+                    .get(java.util.Calendar.HOUR_OF_DAY)
+            }
+            LaunchedEffect(apps, folderHour) {
+                folderStore.seedIfEmpty(apps)
+                // Поставили или снесли приложение — живые папки подбирают
+                // это сами, ручные не трогаются.
+                folderStore.syncRules(apps, repository.stats)
+            }
 
             val density = LocalDensity.current
             // Тему сменили — идём в источник за новой фотографией. Вшитые
@@ -800,7 +813,12 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                         onCreateFolder = { folderStore.create(it) },
                         onRenameFolder = { id, title -> folderStore.rename(id, title) },
                         onDeleteFolder = { folderStore.delete(it) },
-                        onMoveFolder = { from, to -> folderStore.moveFolder(from, to) },
+                        autoFolderOn = { key -> folderStore.ruled(key) != null },
+                    autoFolderCount = { key -> folderStore.countFor(key, apps, repository.stats) },
+                    onAutoFolder = { key, enabled ->
+                        folderStore.setCategoryFolder(key, enabled, apps, repository.stats)
+                    },
+                    onMoveFolder = { from, to -> folderStore.moveFolder(from, to) },
                         onExportBackup = { exportLauncher.launch(app.plein.data.Backup.fileName()) },
                         onImportBackup = { importLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) },
                         backdropFailure = backdropFailure,

@@ -252,4 +252,8 @@
     <string name="tile_media">Музыка</string>
     <string name="media_allow">Разрешить доступ к уведомлениям</string>
     <string name="media_silence">Ничего не играет</string>
+    <string name="auto_folders">Папки по категориям</string>
+    <string name="auto_folder_empty">приложений пока нет</string>
+    <string name="folder_now">Сейчас</string>
+    <string name="folder_now_hint">то, что вы открываете в этот час</string>
 </resources>

@@ -252,4 +252,8 @@
     <string name="tile_media">Musique</string>
     <string name="media_allow">Autoriser l’accès aux notifications</string>
     <string name="media_silence">Rien ne joue</string>
+    <string name="auto_folders">Dossiers par catégorie</string>
+    <string name="auto_folder_empty">aucune application</string>
+    <string name="folder_now">Maintenant</string>
+    <string name="folder_now_hint">ce que vous ouvrez à cette heure</string>
 </resources>

@@ -252,4 +252,8 @@
     <string name="tile_media">Music</string>
     <string name="media_allow">Allow notification access</string>
     <string name="media_silence">Nothing is playing</string>
+    <string name="auto_folders">Category folders</string>
+    <string name="auto_folder_empty">no apps yet</string>
+    <string name="folder_now">Right now</string>
+    <string name="folder_now_hint">what you open at this hour</string>
 </resources>

@@ -248,4 +248,5 @@
     <string name="contact_write">Écrire</string>
     <string name="search_contacts">Chercher les contacts</string>
     <string name="search_contacts_hint">Noms et numéros du répertoire</string>
+    <string name="dream_left">%1$d h %2$d min</string>
 </resources>

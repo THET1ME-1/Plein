@@ -248,4 +248,5 @@
     <string name="contact_write">Scrivi</string>
     <string name="search_contacts">Cerca contatti</string>
     <string name="search_contacts_hint">Nomi e numeri della rubrica</string>
+    <string name="dream_left">%1$d h %2$d min</string>
 </resources>

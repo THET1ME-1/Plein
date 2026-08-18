@@ -248,4 +248,5 @@
     <string name="contact_write">Schreiben</string>
     <string name="search_contacts">Kontakte durchsuchen</string>
     <string name="search_contacts_hint">Namen und Nummern aus dem Telefonbuch</string>
+    <string name="dream_left">%1$d Std %2$d Min</string>
 </resources>

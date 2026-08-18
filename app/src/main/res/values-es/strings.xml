@@ -248,4 +248,5 @@
     <string name="contact_write">Escribir</string>
     <string name="search_contacts">Buscar contactos</string>
     <string name="search_contacts_hint">Nombres y números de la agenda</string>
+    <string name="dream_left">%1$d h %2$d min</string>
 </resources>

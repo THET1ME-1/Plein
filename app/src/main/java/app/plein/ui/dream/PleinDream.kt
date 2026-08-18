@@ -8,11 +8,14 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -24,12 +27,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -45,16 +47,41 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import androidx.compose.ui.res.stringResource
+import app.plein.R
 import app.plein.data.Prefs
+import app.plein.ui.theme.DisplayFont
 import app.plein.ui.theme.MonoFont
 import app.plein.ui.theme.PleinTheme
 import app.plein.ui.theme.googleFontFamily
 import app.plein.ui.theme.isDark
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+/**
+ * Полоса ночи под часами.
+ *
+ * Отсчёт идёт от минуты, когда телефон поставили на зарядку, а не от условных
+ * десяти вечера: лёг в два ночи — полоса начинается с нуля. Будильник дальше
+ * шестнадцати часов это уже не сон, а завтрашние дела, и полосы не будет.
+ */
+object NightScale {
+
+    /** Дольше этого ночь не бывает. */
+    private const val LONGEST_HOURS = 16
+
+    data class Scale(val progress: Float, val minutesLeft: Int)
+
+    fun of(startedAt: Long, now: Long, alarmAt: Long?): Scale? {
+        val alarm = alarmAt ?: return null
+        val span = alarm - startedAt
+        if (span <= 0 || span > LONGEST_HOURS * 3_600_000L) return null
+        val done = ((now - startedAt).toFloat() / span).coerceIn(0f, 1f)
+        val left = kotlin.math.ceil((alarm - now).coerceAtLeast(0L) / 60_000.0).toInt()
+        return Scale(done, left)
+    }
+}
 
 /**
  * Заставка на подставке и зарядке.
@@ -131,20 +158,8 @@ class PleinDream : DreamService(), LifecycleOwner, ViewModelStoreOwner, SavedSta
 @Composable
 private fun DreamFace(prefs: Prefs) {
     val context = LocalContext.current
-    var photo by remember { mutableStateOf<ImageBitmap?>(null) }
     var now by remember { mutableStateOf(Date()) }
-
-    LaunchedEffect(Unit) {
-        val saved = prefs.savedBackdrop()
-        photo = withContext(Dispatchers.IO) {
-            runCatching {
-                saved?.file?.let { android.graphics.BitmapFactory.decodeFile(it.path) }
-                    ?: context.assets.open("backdrop_forest.jpg").use {
-                        android.graphics.BitmapFactory.decodeStream(it)
-                    }
-            }.getOrNull()?.asImageBitmap()
-        }
-    }
+    val startedAt = remember { System.currentTimeMillis() }
 
     // Минуты обновляются сами: заставка живёт часами, а не секунды.
     LaunchedEffect(Unit) {
@@ -154,29 +169,42 @@ private fun DreamFace(prefs: Prefs) {
         }
     }
 
+    // Следующий будильник берём у системы, а не выдумываем распорядок.
+    val alarmAt = remember(now) {
+        val alarms = context.getSystemService(android.content.Context.ALARM_SERVICE) as? android.app.AlarmManager
+        runCatching { alarms?.nextAlarmClock?.triggerTime }.getOrNull()
+    }
+    val scale = NightScale.of(startedAt, now.time, alarmAt)
+
+    // Ход крошечный и очень медленный: за полчаса четыре точки. Неподвижные
+    // цифры за ночь выжигают след, а заметный дрейф читается как перекос.
     val drift = rememberInfiniteTransition(label = "drift")
     val shiftX by drift.animateFloat(
-        initialValue = -18f,
-        targetValue = 18f,
-        animationSpec = infiniteRepeatable(tween(120_000, easing = LinearEasing), RepeatMode.Reverse),
+        initialValue = -4f,
+        targetValue = 4f,
+        animationSpec = infiniteRepeatable(tween(1_800_000, easing = LinearEasing), RepeatMode.Reverse),
         label = "x",
     )
     val shiftY by drift.animateFloat(
-        initialValue = 14f,
-        targetValue = -14f,
-        animationSpec = infiniteRepeatable(tween(90_000, easing = LinearEasing), RepeatMode.Reverse),
+        initialValue = 3f,
+        targetValue = -3f,
+        animationSpec = infiniteRepeatable(tween(1_500_000, easing = LinearEasing), RepeatMode.Reverse),
         label = "y",
     )
 
-    val clockFamily = if (prefs.clockFont.isEmpty()) MonoFont else googleFontFamily(prefs.clockFont)
+    val clockFamily = if (prefs.clockFont.isEmpty()) DisplayFont else googleFontFamily(prefs.clockFont)
     val locale = app.plein.ui.rememberLocale()
-    val time = SimpleDateFormat(if (prefs.clockTwentyFour) "HH:mm" else "h:mm a", locale).format(now)
+    val time = SimpleDateFormat(if (prefs.clockTwentyFour) "HH:mm" else "h:mm", locale).format(now)
     val date = SimpleDateFormat("EEEE, d MMMM", locale).format(now)
+    val left = scale?.let {
+        stringResource(R.string.dream_left, it.minutesLeft / 60, it.minutesLeft % 60)
+    }
 
     DreamContent(
         time = time,
         date = date,
-        photo = photo,
+        left = left,
+        progress = scale?.progress,
         clockFamily = clockFamily,
         shiftX = shiftX,
         shiftY = shiftY,
@@ -186,69 +214,99 @@ private fun DreamFace(prefs: Prefs) {
 /**
  * Что видно на заставке.
  *
- * Отдельно от службы: тут нет ни таймеров, ни чтения файлов, поэтому эту
- * часть можно снять на снимок и сверять при каждой правке.
+ * Ни кадра, ни заливки: заставка висит часами, а на OLED чёрное не светится
+ * вовсе. Светится только то, что нужно прочитать спросонья — время, день и
+ * сколько осталось спать.
+ *
+ * Всё стоит на одной вертикали и чуть выше середины экрана: ровно посередине
+ * блок кажется проваленным вниз. Отдельно от службы: тут нет ни таймеров, ни
+ * чтения системы, поэтому эту часть можно снять на снимок и сверять.
  */
 @Composable
 fun DreamContent(
     time: String,
     date: String,
-    photo: ImageBitmap?,
+    left: String?,
+    progress: Float?,
     clockFamily: androidx.compose.ui.text.font.FontFamily?,
     shiftX: Float = 0f,
     shiftY: Float = 0f,
 ) {
+    val night = MaterialTheme.colorScheme.surface.let { surface ->
+        if (surface.luminance() > 0.5f) surface else Color.Black
+    }
     Box(
         Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface)
+            .background(night)
     ) {
-        photo?.let {
-            Image(
-                bitmap = it,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer { alpha = 0.5f },
-            )
-        }
-        Box(
-            Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        0f to Color.Black.copy(alpha = 0.5f),
-                        1f to Color.Black.copy(alpha = 0.75f),
-                    )
-                )
-        )
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
                 .align(Alignment.Center)
+                .padding(bottom = 48.dp)
                 .graphicsLayer {
                     translationX = shiftX
                     translationY = shiftY
-                }
-                .padding(24.dp),
+                },
         ) {
             Text(
                 text = time,
                 fontFamily = clockFamily,
-                fontSize = 72.sp,
-                lineHeight = 76.sp,
-                letterSpacing = (-2).sp,
-                color = Color.White,
+                fontWeight = FontWeight.W200,
+                fontSize = 88.sp,
+                lineHeight = 92.sp,
+                letterSpacing = (-4).sp,
+                color = MaterialTheme.colorScheme.primary,
             )
+
+            // Полоса и подпись держат общую ширину и стоят под цифрами
+            // одним блоком. Дата и остаток идут одной строкой: двумя они
+            // разъезжались по краям и на узком экране налезали друг на друга.
+            val line = 236.dp
+            progress?.let { done ->
+                Box(
+                    Modifier
+                        .padding(top = 28.dp)
+                        .width(line)
+                        .height(2.dp)
+                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f))
+                ) {
+                    Box(
+                        Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(done)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.55f))
+                    )
+                }
+            }
+
+            // Дата и остаток идут двумя строками по той же оси. Одной
+            // строкой они не помещались под цифры: «вторник, 18 августа»
+            // с остатком просят больше места, чем занимает время, а в
+            // немецком строка ещё длиннее.
             Text(
                 text = date,
                 fontFamily = MonoFont,
-                fontSize = 12.sp,
-                letterSpacing = 1.4.sp,
-                color = Color.White.copy(alpha = 0.75f),
-                modifier = Modifier.padding(top = 10.dp),
+                fontSize = 10.5.sp,
+                letterSpacing = 1.2.sp,
+                maxLines = 1,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = if (progress == null) 24.dp else 14.dp),
             )
+            left?.let {
+                Text(
+                    text = it,
+                    fontFamily = MonoFont,
+                    fontSize = 10.5.sp,
+                    letterSpacing = 1.2.sp,
+                    maxLines = 1,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
+                    modifier = Modifier.padding(top = 6.dp),
+                )
+            }
         }
     }
 }

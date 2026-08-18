@@ -92,6 +92,11 @@
                 <action android:name="android.service.dreams.DreamService" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+            <!-- Без этого блока в списке заставок вместо кадра стоит серая
+                 заглушка: система берёт превью только отсюда. -->
+            <meta-data
+                android:name="android.service.dream"
+                android:resource="@xml/dream" />
         </service>
 
     </application>

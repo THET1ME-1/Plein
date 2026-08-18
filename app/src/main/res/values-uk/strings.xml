@@ -248,4 +248,5 @@
     <string name="contact_write">Написати</string>
     <string name="search_contacts">Шукати контакти</string>
     <string name="search_contacts_hint">Імена та номери з телефонної книги</string>
+    <string name="dream_left">%1$d год %2$d хв</string>
 </resources>

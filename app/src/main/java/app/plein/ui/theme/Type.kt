@@ -13,6 +13,9 @@ import app.plein.R
  * Веса и трекинг взяты из m3-dna/GUIDE.md §2 и не меняются.
  */
 val DisplayFont = FontFamily(
+    // Тонкий вес нужен одной заставке: крупные цифры на чёрном ночью. В
+    // остальном интерфейсе веса прежние, ДНК не тронута.
+    Font(R.font.unbounded_extralight, FontWeight.W200),
     Font(R.font.unbounded_semibold, FontWeight.W600),
     Font(R.font.unbounded_bold, FontWeight.W700),
     Font(R.font.unbounded_extrabold, FontWeight.W800),

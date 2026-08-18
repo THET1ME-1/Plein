@@ -157,11 +157,23 @@ fun SearchScreen(
     }
 
     // Магазины показываем, только когда на телефоне ничего не нашлось.
+    // Своих знаем по пакету, остальных спрашиваем у системы: кто взялся
+    // обрабатывать market://, тот и магазин, как бы он ни назывался.
     val stores = remember {
         val packages = context.packageManager
-        Stores.available(
-            Stores.KNOWN.filter { runCatching { packages.getPackageInfo(it, 0) }.isSuccess }.toSet()
-        )
+        val installed = Stores.KNOWN.filter {
+            runCatching { packages.getPackageInfo(it, 0) }.isSuccess
+        }.toSet()
+        val probe = Intent(Intent.ACTION_VIEW, Uri.parse(Stores.PROBE))
+        val handlers = runCatching {
+            packages.queryIntentActivities(probe, 0).map {
+                Stores.Handler(
+                    packageName = it.activityInfo.packageName,
+                    label = it.loadLabel(packages).toString(),
+                )
+            }
+        }.getOrDefault(emptyList())
+        Stores.list(installed, handlers)
     }
     val calculated = remember(query) { Calculator.evaluate(query)?.let(Calculator::format) }
 
@@ -374,12 +386,7 @@ fun SearchScreen(
                 // разговор переходит в магазин.
                 if (query.isNotBlank() && matches.isEmpty()) {
                     item { SectionLabel(stringResource(R.string.search_section_install)) }
-                    items(stores, key = { it }) { store ->
-                        val name = when (store) {
-                            Stores.PLAY -> "Google Play"
-                            Stores.RUSTORE -> "RuStore"
-                            else -> "F-Droid"
-                        }
+                    items(stores, key = { it.id }) { store ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
@@ -389,9 +396,14 @@ fun SearchScreen(
                                     val direct = Intent(
                                         Intent.ACTION_VIEW,
                                         Uri.parse(Stores.url(store, query, language)),
-                                    )
-                                    // Схему market:// подхватывать может быть
-                                    // некому: тогда тот же поиск в браузере.
+                                    ).apply {
+                                        // Без адреса система спрашивает, чем
+                                        // открыть: на market:// подписан не
+                                        // только Play, но и F-Droid.
+                                        Stores.target(store)?.let { setPackage(it) }
+                                    }
+                                    // Магазина может не оказаться на месте:
+                                    // тогда тот же поиск уходит в браузер.
                                     if (runCatching { context.startActivity(direct) }.isFailure) {
                                         val web = Intent(
                                             Intent.ACTION_VIEW,
@@ -409,7 +421,7 @@ fun SearchScreen(
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Text(
-                                text = stringResource(R.string.search_store, name),
+                                text = stringResource(R.string.search_store, store.title),
                                 style = MaterialTheme.typography.bodyLarge.copy(fontSize = 14.5.sp),
                                 color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.padding(start = 14.dp),

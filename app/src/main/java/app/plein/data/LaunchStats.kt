@@ -1,6 +1,10 @@
 package app.plein.data
 
 import android.content.Context
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.util.Calendar
 
@@ -20,11 +24,20 @@ class LaunchStats(context: Context) {
     private var counts = load(KEY_TOTAL)
     private var byBucket = load(KEY_HOURS)
 
+    /**
+     * Счётчик растёт сразу, на диск уходит в фоне.
+     *
+     * Вызов идёт из `launch()` прямо перед стартом чужого приложения, то есть
+     * на главном потоке в самый неудачный момент: сериализация двух карт в
+     * JSON занимала кадр ровно там, где виден отклик на касание.
+     */
     fun remember(key: String) {
-        counts[key] = (counts[key] ?: 0) + 1
-        val slot = "$key#${bucketOf(nowHour())}"
-        byBucket[slot] = (byBucket[slot] ?: 0) + 1
-        save()
+        synchronized(this) {
+            counts[key] = (counts[key] ?: 0) + 1
+            val slot = "$key#${bucketOf(nowHour())}"
+            byBucket[slot] = (byBucket[slot] ?: 0) + 1
+        }
+        io.launch { save() }
     }
 
     fun launches(key: String): Int = counts[key] ?: 0
@@ -46,12 +59,16 @@ class LaunchStats(context: Context) {
         map
     }.getOrDefault(mutableMapOf())
 
+    /** Снимок под замком: карту нельзя сериализовать, пока её правят. */
     private fun save() {
-        sp.edit()
-            .putString(KEY_TOTAL, JSONObject(counts as Map<*, *>).toString())
-            .putString(KEY_HOURS, JSONObject(byBucket as Map<*, *>).toString())
-            .apply()
+        val (total, hours) = synchronized(this) {
+            JSONObject(counts.toMap() as Map<*, *>).toString() to
+                JSONObject(byBucket.toMap() as Map<*, *>).toString()
+        }
+        sp.edit().putString(KEY_TOTAL, total).putString(KEY_HOURS, hours).apply()
     }
+
+    private val io = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private companion object {
         const val KEY_TOTAL = "counts"

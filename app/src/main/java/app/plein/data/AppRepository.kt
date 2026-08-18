@@ -7,7 +7,8 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.Drawable
-import android.os.Build
+import android.os.Handler
+import android.os.HandlerThread
 import android.os.Process
 import android.os.UserHandle
 import android.util.LruCache
@@ -61,17 +62,58 @@ class AppRepository(private val context: Context) {
         strength = Collator.PRIMARY
     }
 
+    /**
+     * Свой поток под события системы.
+     *
+     * `registerCallback` без обработчика присылает события в главный поток, а
+     * в ответ на каждое лаунчер обходил каталог кэша значков и заново собирал
+     * весь список: `getInstalledApplications`, `getActivityList` по всем
+     * профилям и сортировка коллатором. Установка, обновление или удаление
+     * приложения роняли кадры на ровном месте.
+     */
+    private val worker = HandlerThread("plein-apps", Process.THREAD_PRIORITY_BACKGROUND)
+        .apply { start() }
+    private val handler = Handler(worker.looper)
+
+    /** Пакеты, которые ждут переучёта. */
+    private val dirty = LinkedHashSet<String>()
+
     private val callback = object : LauncherApps.Callback() {
-        override fun onPackageRemoved(packageName: String, user: UserHandle) = forget(packageName)
-        override fun onPackageAdded(packageName: String, user: UserHandle) = forget(packageName)
-        override fun onPackageChanged(packageName: String, user: UserHandle) = forget(packageName)
-        override fun onPackagesAvailable(names: Array<out String>, user: UserHandle, replacing: Boolean) = refreshBlocking()
-        override fun onPackagesUnavailable(names: Array<out String>, user: UserHandle, replacing: Boolean) = refreshBlocking()
+        override fun onPackageRemoved(packageName: String, user: UserHandle) = schedule(packageName)
+        override fun onPackageAdded(packageName: String, user: UserHandle) = schedule(packageName)
+        override fun onPackageChanged(packageName: String, user: UserHandle) = schedule(packageName)
+        override fun onPackagesAvailable(names: Array<out String>, user: UserHandle, replacing: Boolean) =
+            schedule(*names)
+        override fun onPackagesUnavailable(names: Array<out String>, user: UserHandle, replacing: Boolean) =
+            schedule(*names)
     }
 
-    fun start() = launcherApps.registerCallback(callback)
+    /**
+     * Собрать события в пачку и перестроить список один раз.
+     *
+     * Магазин обновляет приложения десятками, и каждое присылало своё
+     * событие: два десятка полных перестроений подряд, каждое с обходом
+     * диска. Пачка за полсекунды превращает их в одно.
+     */
+    internal fun schedule(vararg packages: String) {
+        synchronized(dirty) { dirty.addAll(packages) }
+        handler.removeCallbacks(rebuild)
+        handler.postDelayed(rebuild, DEBOUNCE_MS)
+    }
 
-    fun stop() = launcherApps.unregisterCallback(callback)
+    private val rebuild = Runnable {
+        val packages = synchronized(dirty) { dirty.toList().also { dirty.clear() } }
+        packages.forEach { forgetCaches(it) }
+        refreshBlocking()
+    }
+
+    fun start() = launcherApps.registerCallback(callback, handler)
+
+    fun stop() {
+        launcherApps.unregisterCallback(callback)
+        handler.removeCallbacks(rebuild)
+        worker.quitSafely()
+    }
 
     /**
      * Приложение обновилось — старая картинка врёт.
@@ -79,10 +121,15 @@ class AppRepository(private val context: Context) {
      * Чистим оба кэша по имени пакета: ключ значка начинается с компонента,
      * поэтому в памяти хватает отбора по префиксу.
      */
-    private fun forget(packageName: String) {
+    private fun forgetCaches(packageName: String) {
         val prefix = "$packageName/"
         iconCache.snapshot().keys.forEach { key -> if (key.startsWith(prefix)) iconCache.remove(key) }
         diskCache.forget(packageName)
+    }
+
+    /** То же, но с немедленной пересборкой списка: для правок из интерфейса. */
+    fun forget(packageName: String) {
+        forgetCaches(packageName)
         refreshBlocking()
     }
 
@@ -201,7 +248,7 @@ class AppRepository(private val context: Context) {
         // Форму вжигаем в битмап: на экране остаётся обычная картинка без клипа.
         shapePath?.let { canvas.clipPath(it) }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && drawable is AdaptiveIconDrawable) {
+        if (drawable is AdaptiveIconDrawable) {
             val full = (sizePx * 1.5f).toInt()
             val offset = ((full - sizePx) / 2f).toInt()
             val layers = listOfNotNull(drawable.background, drawable.foreground)
@@ -389,6 +436,9 @@ class AppRepository(private val context: Context) {
 
     companion object {
         private const val MAX_SHORTCUTS = 5
+
+        /** Пачка событий об установке: полсекунды тишины и один пересчёт. */
+        internal const val DEBOUNCE_MS = 500L
 
         fun componentOf(pkg: String, cls: String) = ComponentName(pkg, cls)
     }

@@ -22,6 +22,9 @@ object AppRanker {
     private const val CONTAINS = 0.5
     private const val SUBSEQUENCE = 0.3
 
+    /** Скидка за угаданную раскладку. */
+    private const val LAYOUT = 0.9
+
     fun score(
         title: String,
         query: String,
@@ -41,10 +44,36 @@ object AppRanker {
     /**
      * Насколько запрос похож на название. Ноль — не похож вовсе.
      *
-     * Обе строки приводим к латинице: набирают по-русски, а половина названий
-     * записана латиницей. «гк» должно находить Google Карты, «тг» — Telegram.
+     * Сначала как набрано, потом — как если бы человек забыл переключить
+     * раскладку. «ntktuhfv» это «телеграм» на английских клавишах, «ырфяфь»
+     * это «shazam» на русских. Подмена идёт со скидкой: свои буквы всегда
+     * сильнее угаданных.
      */
     fun matchOf(title: String, query: String): Double {
+        val direct = lettersOf(title, query)
+        if (direct > 0.0) return direct
+
+        val swapped = swapLayout(query)
+        if (swapped == query) return 0.0
+        return lettersOf(title, swapped) * LAYOUT
+    }
+
+    /**
+     * Тот же текст на другой раскладке.
+     *
+     * Таблица одна, ходим по ней в обе стороны: запрос набран целиком либо
+     * латиницей, либо кириллицей, смешанного не бывает.
+     */
+    fun swapLayout(text: String): String = buildString(text.length) {
+        text.forEach { letter -> append(KEYS[letter] ?: BACK[letter] ?: letter) }
+    }
+
+    /**
+     * Совпадение по буквам. Обе строки приводим к латинице: набирают
+     * по-русски, а половина названий записана латиницей. «гк» должно находить
+     * Google Карты, «тг» — Telegram.
+     */
+    private fun lettersOf(title: String, query: String): Double {
         val needle = translit(query.trim().lowercase(Locale.getDefault()))
         if (needle.isEmpty()) return 0.0
         val name = translit(title.lowercase(Locale.getDefault()))
@@ -94,6 +123,18 @@ object AppRanker {
         'ф' to "f", 'х' to "h", 'ц' to "c", 'ч' to "c", 'ш' to "s", 'щ' to "s", 'ъ' to "",
         'ы' to "y", 'ь' to "", 'э' to "e", 'ю' to "u", 'я' to "a",
     )
+
+    /** Русская буква под английской клавишей: ЙЦУКЕН поверх QWERTY. */
+    private val KEYS = mapOf(
+        'q' to 'й', 'w' to 'ц', 'e' to 'у', 'r' to 'к', 't' to 'е', 'y' to 'н', 'u' to 'г',
+        'i' to 'ш', 'o' to 'щ', 'p' to 'з', '[' to 'х', ']' to 'ъ',
+        'a' to 'ф', 's' to 'ы', 'd' to 'в', 'f' to 'а', 'g' to 'п', 'h' to 'р', 'j' to 'о',
+        'k' to 'л', 'l' to 'д', ';' to 'ж', '\'' to 'э',
+        'z' to 'я', 'x' to 'ч', 'c' to 'с', 'v' to 'м', 'b' to 'и', 'n' to 'т', 'm' to 'ь',
+        ',' to 'б', '.' to 'ю',
+    )
+
+    private val BACK = KEYS.entries.associate { (key, letter) -> letter to key }
 
     private fun isSubsequence(needle: String, haystack: String): Boolean {
         var index = 0

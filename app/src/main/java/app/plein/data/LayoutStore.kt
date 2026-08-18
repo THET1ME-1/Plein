@@ -65,6 +65,20 @@ class LayoutStore(context: Context) {
 
     fun has(folderId: String): Boolean = tiles(folderId).isNotEmpty()
 
+    /**
+     * Номера всех виджетов, которые реально стоят на страницах.
+     *
+     * Нужны, чтобы найти осиротевшие: номер выдаётся до системного диалога
+     * привязки, а лаунчер в это время сидит в фоне и его нередко убивают.
+     * Тогда номер остаётся за приложением, а виджета нет.
+     */
+    fun widgetIds(): Set<Int> {
+        val all = sp.all.keys
+        return all.flatMap { folderId ->
+            tiles(folderId).mapNotNull { (it.item as? CellItem.Widget)?.widgetId }
+        }.toSet()
+    }
+
     private fun save(folderId: String, tiles: List<Placement>) {
         cache[folderId] = tiles
         sp.edit().putString(folderId, CellLayout.encode(tiles)).apply()

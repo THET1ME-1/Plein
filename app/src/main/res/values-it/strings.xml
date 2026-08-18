@@ -240,4 +240,12 @@
     <string name="backup_auto_done">Copia settimanale salvata</string>
     <string name="stacks">Pile di app</string>
     <string name="stacks_hint">Le app rare condividono una cella</string>
+    <string name="search_section_frequent">Spesso</string>
+    <string name="search_section_contacts">Contatti</string>
+    <string name="search_section_install">Installa</string>
+    <string name="search_store">Cerca in %1$s</string>
+    <string name="contact_call">Chiama</string>
+    <string name="contact_write">Scrivi</string>
+    <string name="search_contacts">Cerca contatti</string>
+    <string name="search_contacts_hint">Nomi e numeri della rubrica</string>
 </resources>

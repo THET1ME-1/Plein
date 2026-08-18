@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Accessibility
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.Contacts
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.ArrowDownward
@@ -539,6 +540,14 @@ fun SettingsScreen(
                         },
                         place = RowPlace.Middle,
                         onClick = { pickingWeb = true },
+                    )
+                    SettingsToggleRow(
+                        icon = Icons.Rounded.Contacts,
+                        title = stringResource(R.string.search_contacts),
+                        subtitle = stringResource(R.string.search_contacts_hint),
+                        checked = prefs.searchContacts,
+                        place = RowPlace.Middle,
+                        onCheckedChange = { prefs.updateSearchContacts(it) },
                     )
                     SettingsRow(
                         icon = Icons.Rounded.Language,

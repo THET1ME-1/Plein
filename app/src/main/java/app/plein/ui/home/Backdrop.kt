@@ -123,7 +123,7 @@ fun Backdrop(
     val clockFamily = if (clockFont.isEmpty()) MonoFont else googleFontFamily(clockFont)
     // Дата берёт язык интерфейса: раньше стояла русская локаль, и англичанин
     // видел «ПТ, 8 АВГ».
-    val locale = Locale.getDefault()
+    val locale = app.plein.ui.rememberLocale()
     val date = remember(locale, now) {
         SimpleDateFormat("EEE, d MMM", locale).format(now).uppercase(locale)
     }

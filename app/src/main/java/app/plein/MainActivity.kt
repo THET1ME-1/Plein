@@ -47,6 +47,9 @@ import app.plein.ui.theme.isDark
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 
+/** Как часто перезапрашивается погода, пока лаунчер открыт. */
+private const val WEATHER_REFRESH_MS = 30 * 60 * 1000L
+
 /** Название плитки для листов выбора. */
 private fun tileTitle(kind: String): Int = when (kind) {
     app.plein.ui.home.Tiles.CLOCK -> R.string.tile_clock
@@ -107,6 +110,7 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
             screenWidth = resources.displayMetrics.widthPixels,
         )
         repository.start()
+        settleWidgets()
 
         setContent {
             val context = LocalContext.current
@@ -144,25 +148,33 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                 ActivityResultContracts.RequestPermission()
             ) { granted -> if (granted) weatherTick++ }
 
-            // Разрешение спрашиваем ровно тогда, когда погоду включили.
+            // Разрешение спрашиваем один раз за установку: отказавшийся
+            // получал системный запрос при каждом входе на домашний экран,
+            // пока Android не начинал глушить их сам.
             LaunchedEffect(prefs.showWeather) {
-                if (prefs.showWeather &&
+                if (prefs.showWeather && !prefs.weatherAsked &&
                     androidx.core.content.ContextCompat.checkSelfPermission(
                         context, android.Manifest.permission.ACCESS_COARSE_LOCATION
                     ) != android.content.pm.PackageManager.PERMISSION_GRANTED
                 ) {
+                    prefs.markWeatherAsked()
                     locationPermission.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION)
                 }
             }
 
-            // Погода обновляется при показе экрана и когда её включили.
+            // Погода обновляется при показе экрана, при включении и дальше
+            // сама раз в полчаса: до этого температура застывала на той, что
+            // приехала при входе, и висела до перезапуска лаунчера.
             LaunchedEffect(prefs.showWeather, prefs.weatherProvider, weatherTick) {
                 if (!prefs.showWeather) {
                     weatherTemp = null
-                } else {
+                    return@LaunchedEffect
+                }
+                while (true) {
                     val now = app.plein.data.Weather(context).current(prefs.weatherProvider)
                     weatherTemp = now?.let { "${it.celsius}°" }
                     weatherCode = now?.code ?: 0
+                    kotlinx.coroutines.delay(WEATHER_REFRESH_MS)
                 }
             }
             val scope = rememberCoroutineScope()
@@ -217,6 +229,7 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
             ) { result ->
                 val waiting = pendingWidget ?: return@rememberLauncherForActivityResult
                 pendingWidget = null
+                widgets.clearPending()
                 val (folderId, widgetId, size) = waiting
                 if (result.resultCode == RESULT_OK) {
                     layoutStore.addWidget(folderId, widgetId, size.first, size.second, prefs.columns)
@@ -605,7 +618,7 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                         when (kind) {
                             app.plein.ui.home.Tiles.CLOCK -> {
                                 val now = app.plein.ui.home.rememberNow()
-                                val locale = java.util.Locale.getDefault()
+                                val locale = app.plein.ui.rememberLocale()
                                 app.plein.ui.home.ClockTile(
                                     time = java.text.SimpleDateFormat(
                                         if (prefs.clockTwentyFour) "HH:mm" else "h:mm a", locale,
@@ -681,6 +694,9 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                         iconShape = prefs.iconShape,
                         webProvider = prefs.webProvider,
                         initialQuery = spokenQuery,
+                        searchContacts = prefs.searchContacts,
+                        contactsAsked = prefs.contactsAsked,
+                        onContactsAsked = { prefs.markContactsAsked() },
                         onVoice = startVoice,
                         onAppMenu = { menuFor = it },
                         onClose = {
@@ -786,6 +802,10 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                                 haptics.confirm()
                             } else {
                                 pendingWidget = Triple(folderId, widgetId, width to height)
+                                // Ожидание дублируется на диск: пока открыт
+                                // системный диалог, лаунчер в фоне и его могут
+                                // убить вместе со всем состоянием экрана.
+                                widgets.rememberPending(folderId, widgetId, width, height)
                                 bindLauncher.launch(widgets.bindIntent(widgetId, provider.info))
                             }
                             pickingWidgetFor = null
@@ -899,6 +919,28 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                 }
             }
         }
+    }
+
+    /**
+     * Разбор после убийства процесса: виджет, который успели разрешить, но не
+     * успели поставить, и номера, за которыми ничего не стоит.
+     *
+     * Без этого разрешённый виджет пропадал молча, а его номер оставался за
+     * лаунчером навсегда — так их и копится десяток за пару месяцев.
+     */
+    private fun settleWidgets() {
+        widgets.pending()?.let { waiting ->
+            widgets.clearPending()
+            if (widgets.isBound(waiting.widgetId)) {
+                layoutStore.addWidget(
+                    waiting.folderId, waiting.widgetId,
+                    waiting.width, waiting.height, prefs.columns,
+                )
+            } else {
+                widgets.release(waiting.widgetId)
+            }
+        }
+        widgets.releaseOrphans(layoutStore.widgetIds())
     }
 
     override fun onStart() {

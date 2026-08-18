@@ -29,10 +29,21 @@ class IconDiskCache(context: Context) {
         return bitmap
     }
 
+    /**
+     * Пишем через временный файл и переименование.
+     *
+     * Прогрев идёт в два потока, а видимые значки рисуются параллельно с ним:
+     * на одном ключе оба могли писать в один файл сразу, и на диске оставался
+     * обрубок PNG. Чтение его отбрасывало и удаляло, значок перерисовывался —
+     * то есть кэш лечился сам, но с миганием и лишней работой. Переименование
+     * в пределах одного каталога атомарно, поэтому файл либо целый, либо его нет.
+     */
     fun write(packageName: String, key: String, bitmap: Bitmap) {
         runCatching {
             val file = fileOf(packageName, key)
-            file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            val tmp = File(dir, "${file.name}.${Thread.currentThread().id}.tmp")
+            tmp.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            if (!tmp.renameTo(file)) tmp.delete()
         }
     }
 
@@ -48,8 +59,12 @@ class IconDiskCache(context: Context) {
      */
     fun trim() {
         val files = dir.listFiles() ?: return
-        if (files.size <= MAX_FILES) return
-        files.sortedByDescending { it.lastModified() }.drop(MAX_FILES).forEach { it.delete() }
+        // Недописанные хвосты от убитого процесса: их не должно быть видно
+        // ни счётчику, ни чтению.
+        files.filter { it.name.endsWith(".tmp") }.forEach { it.delete() }
+        val kept = files.filterNot { it.name.endsWith(".tmp") }
+        if (kept.size <= MAX_FILES) return
+        kept.sortedByDescending { it.lastModified() }.drop(MAX_FILES).forEach { it.delete() }
     }
 
     private fun fileOf(packageName: String, key: String) =

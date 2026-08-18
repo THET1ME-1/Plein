@@ -70,6 +70,16 @@ class Prefs(context: Context) {
     var showWeather by mutableStateOf(sp.getBoolean(KEY_SHOW_WEATHER, false))
         private set
 
+    /**
+     * Разрешение на приблизительное место спрашивали хотя бы раз.
+     *
+     * Без этой памятки лаунчер просил его при каждом входе, пока погода
+     * включена: отказавшийся получал системный запрос поверх домашнего
+     * экрана снова и снова, пока Android не начинал глушить их сам.
+     */
+    var weatherAsked by mutableStateOf(sp.getBoolean(KEY_WEATHER_ASKED, false))
+        private set
+
     /** Имя семейства из каталога Google Fonts. Пусто означает шрифт ДНК. */
     var clockFont by mutableStateOf(sp.getString(KEY_CLOCK_FONT, null).orEmpty())
         private set
@@ -171,6 +181,19 @@ class Prefs(context: Context) {
         rowHeight = value
         sp.edit().putInt(KEY_ROW_HEIGHT, value).apply()
     }
+
+    /** Искать ли по телефонной книге. Кому это лишнее, выключает целиком. */
+    var searchContacts by mutableStateOf(sp.getBoolean(KEY_SEARCH_CONTACTS, true))
+        private set
+
+    /**
+     * Разрешение на книгу спрашивали хотя бы раз.
+     *
+     * Та же памятка, что у погоды: отказавшийся не должен получать системный
+     * запрос при каждой первой букве в поиске.
+     */
+    var contactsAsked by mutableStateOf(sp.getBoolean(KEY_CONTACTS_ASKED, false))
+        private set
 
     /** Куда уходит запрос из строки поиска. */
     var webProvider by mutableStateOf(sp.getString(KEY_WEB, null) ?: "google")
@@ -307,6 +330,21 @@ class Prefs(context: Context) {
         sp.edit().putBoolean(KEY_SHOW_WEATHER, value).apply()
     }
 
+    fun updateSearchContacts(value: Boolean) {
+        searchContacts = value
+        sp.edit().putBoolean(KEY_SEARCH_CONTACTS, value).apply()
+    }
+
+    fun markContactsAsked() {
+        contactsAsked = true
+        sp.edit().putBoolean(KEY_CONTACTS_ASKED, true).apply()
+    }
+
+    fun markWeatherAsked() {
+        weatherAsked = true
+        sp.edit().putBoolean(KEY_WEATHER_ASKED, true).apply()
+    }
+
     fun updateClockFont(value: String) {
         clockFont = value
         sp.edit().putString(KEY_CLOCK_FONT, value).apply()
@@ -428,6 +466,9 @@ class Prefs(context: Context) {
         const val KEY_G_LOCK = "gesture_lock"
         const val KEY_G_SHADE = "gesture_shade"
         const val KEY_G_PINCH = "gesture_pinch"
+        const val KEY_WEATHER_ASKED = "weather_asked"
+        const val KEY_SEARCH_CONTACTS = "search_contacts"
+        const val KEY_CONTACTS_ASKED = "contacts_asked"
         const val KEY_AUTO_UPDATE = "auto_update"
         const val KEY_UPDATE_CHECKED = "update_checked"
         const val KEY_BACKDROP_ORIGIN = "backdrop_origin"

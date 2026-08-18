@@ -240,4 +240,12 @@
     <string name="backup_auto_done">Copie hebdomadaire écrite</string>
     <string name="stacks">Piles d\'applications</string>
     <string name="stacks_hint">Les applis rares partagent une case</string>
+    <string name="search_section_frequent">Souvent</string>
+    <string name="search_section_contacts">Contacts</string>
+    <string name="search_section_install">Installer</string>
+    <string name="search_store">Chercher dans %1$s</string>
+    <string name="contact_call">Appeler</string>
+    <string name="contact_write">Écrire</string>
+    <string name="search_contacts">Chercher les contacts</string>
+    <string name="search_contacts_hint">Noms et numéros du répertoire</string>
 </resources>

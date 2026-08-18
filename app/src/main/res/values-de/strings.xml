@@ -240,4 +240,12 @@
     <string name="backup_auto_done">Wochenkopie gespeichert</string>
     <string name="stacks">Stapel von Apps</string>
     <string name="stacks_hint">Seltene Apps teilen eine Zelle</string>
+    <string name="search_section_frequent">Häufig</string>
+    <string name="search_section_contacts">Kontakte</string>
+    <string name="search_section_install">Installieren</string>
+    <string name="search_store">In %1$s suchen</string>
+    <string name="contact_call">Anrufen</string>
+    <string name="contact_write">Schreiben</string>
+    <string name="search_contacts">Kontakte durchsuchen</string>
+    <string name="search_contacts_hint">Namen und Nummern aus dem Telefonbuch</string>
 </resources>

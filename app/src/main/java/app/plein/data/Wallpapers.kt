@@ -3,7 +3,6 @@ package app.plein.data
 import android.app.WallpaperManager
 import android.content.Context
 import android.graphics.BitmapFactory
-import android.os.Build
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -30,16 +29,12 @@ object Wallpapers {
                 } ?: return@withContext false
 
                 val manager = WallpaperManager.getInstance(context)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    val flags = when (target) {
-                        WallpaperTarget.Home -> WallpaperManager.FLAG_SYSTEM
-                        WallpaperTarget.Lock -> WallpaperManager.FLAG_LOCK
-                        WallpaperTarget.Both -> WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK
-                    }
-                    manager.setBitmap(bitmap, null, true, flags)
-                } else {
-                    manager.setBitmap(bitmap)
+                val flags = when (target) {
+                    WallpaperTarget.Home -> WallpaperManager.FLAG_SYSTEM
+                    WallpaperTarget.Lock -> WallpaperManager.FLAG_LOCK
+                    WallpaperTarget.Both -> WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK
                 }
+                manager.setBitmap(bitmap, null, true, flags)
                 true
             }.getOrDefault(false)
         }

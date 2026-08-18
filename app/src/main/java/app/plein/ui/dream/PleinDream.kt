@@ -169,7 +169,7 @@ private fun DreamFace(prefs: Prefs) {
     )
 
     val clockFamily = if (prefs.clockFont.isEmpty()) MonoFont else googleFontFamily(prefs.clockFont)
-    val locale = Locale.getDefault()
+    val locale = app.plein.ui.rememberLocale()
     val time = SimpleDateFormat(if (prefs.clockTwentyFour) "HH:mm" else "h:mm a", locale).format(now)
     val date = SimpleDateFormat("EEEE, d MMMM", locale).format(now)
 

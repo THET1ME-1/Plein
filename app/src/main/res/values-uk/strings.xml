@@ -240,4 +240,12 @@
     <string name="backup_auto_done">Тижневу копію записано</string>
     <string name="stacks">Стоси застосунків</string>
     <string name="stacks_hint">Рідкісні застосунки в одній клітинці</string>
+    <string name="search_section_frequent">Часто</string>
+    <string name="search_section_contacts">Контакти</string>
+    <string name="search_section_install">Встановити</string>
+    <string name="search_store">Знайти в %1$s</string>
+    <string name="contact_call">Подзвонити</string>
+    <string name="contact_write">Написати</string>
+    <string name="search_contacts">Шукати контакти</string>
+    <string name="search_contacts_hint">Імена та номери з телефонної книги</string>
 </resources>

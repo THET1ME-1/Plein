@@ -74,4 +74,24 @@ class AppRankerTest {
         )
         assertEquals("Камера", ranked.first())
     }
+
+    @Test
+    fun `слово в чужой раскладке находится`() {
+        // Набрано «телеграм» на английской раскладке.
+        assertTrue("ntktuhfv не нашло Телеграм", score("ntktuhfv", "Телеграм") > 0)
+        // И наоборот: «shazam» на русской.
+        assertTrue("ырфяфь не нашло Shazam", score("ырфяфь", "Shazam") > 0)
+    }
+
+    @Test
+    fun `свои буквы сильнее подменённой раскладки`() {
+        val direct = score("теле", "Телеграм")
+        val swapped = score("ntkt", "Телеграм")
+        assertTrue("подмена должна уступать: $direct против $swapped", direct > swapped)
+    }
+
+    @Test
+    fun `подмена раскладки не тащит чужое`() {
+        assertEquals(0.0, score("qqq", "Телеграм"), 0.001)
+    }
 }

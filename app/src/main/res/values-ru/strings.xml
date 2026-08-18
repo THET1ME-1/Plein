@@ -240,4 +240,12 @@
     <string name="backup_auto_done">Недельная копия записана</string>
     <string name="stacks">Стопки приложений</string>
     <string name="stacks_hint">Редкие приложения в одной клетке</string>
+    <string name="search_section_frequent">Часто</string>
+    <string name="search_section_contacts">Контакты</string>
+    <string name="search_section_install">Установить</string>
+    <string name="search_store">Найти в %1$s</string>
+    <string name="contact_call">Позвонить</string>
+    <string name="contact_write">Написать</string>
+    <string name="search_contacts">Искать контакты</string>
+    <string name="search_contacts_hint">Имена и номера из телефонной книги</string>
 </resources>

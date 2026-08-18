@@ -149,11 +149,7 @@ object Updates {
      * молча ничего не показывает.
      */
     fun canInstall(context: Context): Boolean =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            context.packageManager.canRequestPackageInstalls()
-        } else {
-            true
-        }
+        context.packageManager.canRequestPackageInstalls()
 
     fun permissionIntent(context: Context): Intent =
         Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)

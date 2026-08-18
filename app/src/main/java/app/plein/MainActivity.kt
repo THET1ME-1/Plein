@@ -474,11 +474,19 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
             LaunchedEffect(apps) { folderStore.seedIfEmpty(apps) }
 
             val density = LocalDensity.current
-            // Тему сменили — кадр меняем, только если он ей больше не годится.
-            // Безусловная замена стирала скачанный кадр на первом же кадре
-            // композиции, ещё до того, как человек что-то трогал.
+            // Тему сменили — идём в источник за новой фотографией. Вшитые
+            // четыре кадра человек видел при установке, и подсовывать их
+            // снова на каждом переключении режима незачем; если источник
+            // промолчит, picker сам вернётся к ним запасным ходом.
+            //
+            // Первый заход не считается: там лежит сохранённый кадр, и
+            // безусловная замена стирала скачанный ещё до того, как человек
+            // что-то трогал.
+            var themeWas by remember { mutableStateOf<Boolean?>(null) }
             LaunchedEffect(dark) {
-                if (!Backdrops.fits(backdrop, dark)) backdrop = Backdrops.firstFor(dark)
+                val change = Backdrops.themeChanged(themeWas, dark)
+                themeWas = dark
+                if (change) loadBackdrop()
             }
 
             // Цвет из кадра перебивает свой seed, пока это не выключено в настройках.

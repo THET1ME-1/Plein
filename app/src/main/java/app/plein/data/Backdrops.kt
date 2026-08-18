@@ -41,4 +41,13 @@ object Backdrops {
     }
 
     fun firstFor(dark: Boolean): Backdrop = next(null, dark)
+
+    /**
+     * Пора ли идти за новым кадром из-за темы.
+     *
+     * Смена режима — повод показать новую фотографию, а первый заход после
+     * запуска не повод: там уже лежит сохранённый кадр, и дёргать сеть на
+     * каждом старте незачем.
+     */
+    fun themeChanged(was: Boolean?, now: Boolean): Boolean = was != null && was != now
 }

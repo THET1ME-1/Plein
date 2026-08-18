@@ -56,6 +56,7 @@ private fun tileTitle(kind: String): Int = when (kind) {
     app.plein.ui.home.Tiles.WEATHER -> R.string.tile_weather
     app.plein.ui.home.Tiles.BATTERY -> R.string.tile_battery
     app.plein.ui.home.Tiles.CALENDAR -> R.string.tile_calendar
+    app.plein.ui.home.Tiles.MEDIA -> R.string.tile_media
     else -> R.string.tile_note
 }
 
@@ -123,6 +124,9 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
             val dark = prefs.themeMode.isDark(isSystemInDarkTheme())
 
             var seed by remember { mutableStateOf(DefaultSeed) }
+            // Плитка знает, что играет, а открывать плеер приходится странице:
+            // короткое касание разбирает она, а не плитка.
+            var playingPackage by remember { mutableStateOf<String?>(null) }
             // Кадр поднимаем с диска: нажатие «Домой» и убийство процесса
             // возвращали вшитую фотографию вместо скачанной.
             var backdrop by remember {
@@ -604,6 +608,26 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
 
                             app.plein.ui.home.Tiles.NOTE -> editingNote = true
 
+                            app.plein.ui.home.Tiles.MEDIA -> {
+                                // Доступа нет — ведём туда, где его выдают;
+                                // есть — открываем сам плеер.
+                                if (!app.plein.data.NowPlaying.allowed(context)) {
+                                    runCatching {
+                                        startActivity(
+                                            android.content.Intent(
+                                                android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS
+                                            )
+                                        )
+                                    }
+                                } else {
+                                    playingPackage?.let { pkg ->
+                                        packageManager.getLaunchIntentForPackage(pkg)?.let { intent ->
+                                            runCatching { startActivity(intent) }
+                                        }
+                                    }
+                                }
+                            }
+
                             app.plein.ui.home.Tiles.CALENDAR -> runCatching {
                                 startActivity(
                                     android.content.Intent(android.content.Intent.ACTION_VIEW).setData(
@@ -644,6 +668,21 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                                 app.plein.ui.home.BatteryTile(
                                     percent = battery.percent,
                                     charging = battery.charging,
+                                )
+                            }
+
+                            app.plein.ui.home.Tiles.MEDIA -> {
+                                val playing = app.plein.data.rememberPlaying()
+                                playingPackage = playing.track?.packageName
+                                app.plein.ui.home.MediaTile(
+                                    title = playing.track?.title,
+                                    artist = playing.track?.artist.orEmpty(),
+                                    art = playing.track?.art,
+                                    playing = playing.track?.playing == true,
+                                    allowed = app.plein.data.NowPlaying.allowed(context),
+                                    onToggle = { playing.toggle() },
+                                    onNext = { playing.next() },
+                                    onPrevious = { playing.previous() },
                                 )
                             }
 

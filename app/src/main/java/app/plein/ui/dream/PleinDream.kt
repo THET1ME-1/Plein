@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
@@ -211,11 +212,18 @@ private fun DreamFace(prefs: Prefs) {
         stringResource(R.string.dream_left, it.minutesLeft / 60, it.minutesLeft % 60)
     }
 
+    val playing = app.plein.data.rememberPlaying()
+    val track = playing.track?.takeIf { it.playing }
+    val sounds = track?.let { entry ->
+        if (entry.artist.isBlank()) entry.title else "${entry.title} · ${entry.artist}"
+    }
+
     DreamContent(
         time = time,
         date = date,
         left = left,
         progress = scale?.progress,
+        nowPlaying = sounds,
         clockFamily = clockFamily,
         shiftX = shiftX,
         shiftY = shiftY,
@@ -239,6 +247,7 @@ fun DreamContent(
     date: String,
     left: String?,
     progress: Float?,
+    nowPlaying: String?,
     clockFamily: androidx.compose.ui.text.font.FontFamily?,
     shiftX: Float = 0f,
     shiftY: Float = 0f,
@@ -316,6 +325,24 @@ fun DreamContent(
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
                     modifier = Modifier.padding(top = 6.dp),
+                )
+            }
+
+            // Что играет — только пока звучит. Ночью на зарядке это подкаст
+            // или альбом, и знать, что именно, полезнее, чем видеть пустоту.
+            nowPlaying?.let {
+                Text(
+                    text = it,
+                    fontFamily = MonoFont,
+                    fontSize = 10.sp,
+                    letterSpacing = 1.1.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                    modifier = Modifier
+                        .padding(top = 18.dp)
+                        .width(236.dp),
                 )
             }
         }

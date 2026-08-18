@@ -83,6 +83,18 @@
                 android:resource="@xml/gestures_service" />
         </service>
 
+        <!-- Служба-ключ: сама ничего не делает, но без неё система не пускает
+             лаунчер к чужим сессиям проигрывания. -->
+        <service
+            android:name=".PleinNotifications"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
         <service
             android:name=".ui.dream.PleinDream"
             android:exported="true"

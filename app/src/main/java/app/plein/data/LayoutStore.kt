@@ -94,6 +94,7 @@ object TileSizes {
         "battery" -> 2 to 1
         "calendar" -> 4 to 1
         "note" -> 4 to 2
+        "media" -> 4 to 2
         else -> 2 to 2
     }
 
@@ -101,6 +102,7 @@ object TileSizes {
     fun variants(kind: String): List<Pair<Int, Int>> = when (kind) {
         "battery" -> listOf(2 to 1, 2 to 2, 4 to 1)
         "calendar" -> listOf(4 to 1, 4 to 2, 2 to 2)
+        "media" -> listOf(4 to 2, 4 to 1, 2 to 2)
         "note" -> listOf(4 to 2, 4 to 1, 2 to 2)
         else -> listOf(2 to 2, 4 to 2, 2 to 1, 4 to 1)
     }

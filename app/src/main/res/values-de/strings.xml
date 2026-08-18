@@ -249,4 +249,7 @@
     <string name="search_contacts">Kontakte durchsuchen</string>
     <string name="search_contacts_hint">Namen und Nummern aus dem Telefonbuch</string>
     <string name="dream_left">%1$d Std %2$d Min</string>
+    <string name="tile_media">Musik</string>
+    <string name="media_allow">Zugriff auf Mitteilungen erlauben</string>
+    <string name="media_silence">Es läuft nichts</string>
 </resources>

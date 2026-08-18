@@ -249,4 +249,7 @@
     <string name="search_contacts">Шукати контакти</string>
     <string name="search_contacts_hint">Імена та номери з телефонної книги</string>
     <string name="dream_left">%1$d год %2$d хв</string>
+    <string name="tile_media">Музика</string>
+    <string name="media_allow">Дозволити доступ до сповіщень</string>
+    <string name="media_silence">Нічого не грає</string>
 </resources>

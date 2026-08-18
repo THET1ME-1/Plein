@@ -22,6 +22,7 @@ class DreamScreenshotTest : ScreenshotTest() {
                 date = "вторник, 18 августа",
                 left = "4 ч 20 мин",
                 progress = 0.53f,
+                nowPlaying = "Полёт над городом · Хмурый Ветер",
                 clockFamily = DisplayFont,
             )
         }
@@ -35,6 +36,7 @@ class DreamScreenshotTest : ScreenshotTest() {
                 date = "вторник, 18 августа",
                 left = null,
                 progress = null,
+                nowPlaying = null,
                 clockFamily = DisplayFont,
             )
         }
@@ -54,6 +56,7 @@ class DreamScreenshotTest : ScreenshotTest() {
                                 date = "вторник",
                                 left = "4 ч 20 мин",
                                 progress = 0.53f,
+                                nowPlaying = null,
                                 clockFamily = DisplayFont,
                             )
                         }

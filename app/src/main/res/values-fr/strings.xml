@@ -249,4 +249,7 @@
     <string name="search_contacts">Chercher les contacts</string>
     <string name="search_contacts_hint">Noms et numéros du répertoire</string>
     <string name="dream_left">%1$d h %2$d min</string>
+    <string name="tile_media">Musique</string>
+    <string name="media_allow">Autoriser l’accès aux notifications</string>
+    <string name="media_silence">Rien ne joue</string>
 </resources>

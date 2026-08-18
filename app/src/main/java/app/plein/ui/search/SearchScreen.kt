@@ -128,7 +128,18 @@ fun SearchScreen(
 
     // Пустая строка показывает ряд значков, набранная — список строками:
     // одно и то же в двух видах на экране не нужно.
-    val frequent = if (query.isBlank()) ranked else emptyList()
+    //
+    // В ряду стоит то, что открывают из самого поиска, а не то, что чаще
+    // запускают вообще: приложение с домашнего экрана человек и так видит,
+    // искать его он не станет. Пока таких открытий нет, ряда тоже нет.
+    val frequent = remember(query, apps) {
+        if (query.isNotBlank()) {
+            emptyList()
+        } else {
+            val order = repository.searchStats.top(FREQUENT)
+            order.mapNotNull { key -> apps.firstOrNull { it.key == key } }
+        }
+    }
     val matches = if (query.isBlank()) emptyList() else ranked
 
     // Телефонная книга. Читаем в фоне: у провайдера свой курсор и свой диск.
@@ -272,6 +283,7 @@ fun SearchScreen(
                             repository = repository,
                             iconShape = iconShape,
                             onOpen = { entry ->
+                                repository.searchStats.remember(entry.key)
                                 repository.launch(entry)
                                 onClose()
                             },
@@ -326,6 +338,7 @@ fun SearchScreen(
                                 .fillMaxWidth()
                                 .combinedClickable(
                                     onClick = {
+                                        repository.searchStats.remember(entry.key)
                                         repository.launch(entry)
                                         onClose()
                                     },

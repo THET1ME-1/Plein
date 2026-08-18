@@ -353,6 +353,9 @@ class AppRepository(private val context: Context) {
     /** Кто и когда открывается: этим потом сортируется поиск. */
     val stats = LaunchStats(context)
 
+    /** Что открывают через поиск: ряд под пустой строкой живёт от этого. */
+    val searchStats = SearchStats(context)
+
     fun launch(entry: AppEntry) {
         stats.remember(entry.key)
         runCatching { launcherApps.startMainActivity(entry.component, entry.user, null, null) }

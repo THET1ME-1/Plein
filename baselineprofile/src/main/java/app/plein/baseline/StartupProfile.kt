@@ -18,7 +18,12 @@ class StartupProfile {
     val rule = BaselineProfileRule()
 
     @Test
-    fun startupAndScroll() = rule.collect(packageName = "app.plein") {
+    fun startupAndScroll() = rule.collect(
+        packageName = "app.plein",
+        // Без этого флага собирается только общий профиль, а startup-профиль
+        // не пишется вовсе: R8 не узнает, какой код класть в начало dex.
+        includeInStartupProfile = true,
+    ) {
         pressHome()
         startActivityAndWait()
 

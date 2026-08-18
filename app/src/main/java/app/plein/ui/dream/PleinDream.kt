@@ -118,10 +118,21 @@ class PleinDream : DreamService(), LifecycleOwner, ViewModelStoreOwner, SavedSta
             setViewTreeViewModelStoreOwner(this@PleinDream)
             setViewTreeSavedStateRegistryOwner(this@PleinDream)
             setContent {
-                val dark = prefs.themeMode.isDark(true)
+                // Тему берём настоящую: раньше сюда подставлялось «система
+                // тёмная», и при системной теме заставка всегда была чёрной.
+                val systemDark = (resources.configuration.uiMode and
+                    android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+                    android.content.res.Configuration.UI_MODE_NIGHT_YES
+                val dark = prefs.themeMode.isDark(systemDark)
                 PleinTheme(
                     dark = dark,
-                    seed = androidx.compose.ui.graphics.Color(prefs.seedColor),
+                    seed = androidx.compose.ui.graphics.Color(
+                        app.plein.ui.theme.SeedChoice.of(
+                            fromPhoto = prefs.seedFromPhoto,
+                            photo = prefs.photoSeed,
+                            manual = prefs.seedColor,
+                        )
+                    ),
                     amoled = prefs.amoled,
                     interfaceFont = prefs.interfaceFont,
                 ) {

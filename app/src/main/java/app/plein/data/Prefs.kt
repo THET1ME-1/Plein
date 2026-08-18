@@ -53,6 +53,16 @@ class Prefs(context: Context) {
         private set
 
     /** Цвет из кадра перебивает свой seed, пока человек его не выключил. */
+    /**
+     * Последний цвет, снятый с кадра.
+     *
+     * Держится отдельно от ручного: домашний экран считает его на каждом новом
+     * кадре, а заставка и виджеты живут своей жизнью и читают уже готовое.
+     * Ноль означает, что кадра ещё не было.
+     */
+    var photoSeed by mutableIntStateOf(sp.getInt(KEY_PHOTO_SEED, 0))
+        private set
+
     var seedFromPhoto by mutableStateOf(sp.getBoolean(KEY_SEED_FROM_PHOTO, true))
         private set
 
@@ -396,6 +406,12 @@ class Prefs(context: Context) {
         sp.edit().putInt(KEY_SEED, argb).putBoolean(KEY_SEED_FROM_PHOTO, false).apply()
     }
 
+    fun updatePhotoSeed(argb: Int) {
+        if (argb == photoSeed) return
+        photoSeed = argb
+        sp.edit().putInt(KEY_PHOTO_SEED, argb).apply()
+    }
+
     fun updateSeedFromPhoto(value: Boolean) {
         seedFromPhoto = value
         sp.edit().putBoolean(KEY_SEED_FROM_PHOTO, value).apply()
@@ -443,6 +459,7 @@ class Prefs(context: Context) {
         const val KEY_DYNAMIC = "dynamic_color"
         const val KEY_VIBRANCY = "vibrancy"
         const val KEY_SEED = "seed_color"
+        const val KEY_PHOTO_SEED = "photo_seed"
         const val KEY_SEED_FROM_PHOTO = "seed_from_photo"
         const val KEY_CLOCK_SIZE = "clock_size"
         const val KEY_CLOCK_24 = "clock_24"

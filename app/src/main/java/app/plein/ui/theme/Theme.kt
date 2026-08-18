@@ -43,6 +43,18 @@ fun ThemeMode.isDark(systemDark: Boolean): Boolean = when (this) {
 
 val DefaultSeed = Color(0xFF2E5D73)
 
+/**
+ * Каким цветом красить экран.
+ *
+ * Цвет кадра и ручной цвет живут порознь: человек выключает «брать из кадра»,
+ * подбирает свой, потом возвращает — и цвет кадра не пропал, а ручной не
+ * затёрся. Ноль означает, что кадра ещё не было ни разу.
+ */
+object SeedChoice {
+    fun of(fromPhoto: Boolean, photo: Int, manual: Int): Int =
+        if (fromPhoto && photo != 0) photo else manual
+}
+
 @Composable
 fun PleinTheme(
     dark: Boolean,

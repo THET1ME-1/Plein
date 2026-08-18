@@ -536,7 +536,12 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                     onShuffleBackdrop = loadBackdrop,
                     loadingBackdrop = loadingBackdrop,
                     loadingProgress = backdropProgress,
-                    onSeedExtracted = { seed = it },
+                    onSeedExtracted = {
+                        seed = it
+                        // Заставка и всё, что живёт вне активности, читает
+                        // цвет кадра отсюда: в памяти он им не виден.
+                        prefs.updatePhotoSeed(it.toArgb())
+                    },
                     onOpenSearch = { screen = Screen.Search },
                     hiddenCount = hiddenApps.keys.size,
                     hiddenUnlocked = hiddenApps.unlocked,

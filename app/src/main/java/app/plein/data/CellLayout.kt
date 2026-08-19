@@ -109,6 +109,35 @@ object CellLayout {
     fun rowsOf(placements: List<Placement>): Int =
         (placements.maxOfOrNull { it.cell.lastRow } ?: -1) + 1
 
+    /**
+     * Куда встанет плитка нового размера.
+     *
+     * На месте она остаётся, только если новый размер туда влез. Иначе едет
+     * влево по своей строке, а когда и там тесно — в первую свободную клетку
+     * ниже. Простой отказ выглядел как «выбор размера не работает»: плитка у
+     * правого края никогда не могла стать шире.
+     */
+    fun fitResize(
+        placements: List<Placement>,
+        item: CellItem,
+        width: Int,
+        height: Int,
+        columns: Int,
+    ): Cell? {
+        if (width > columns) return null
+        val current = placements.firstOrNull { it.item.id == item.id }?.cell ?: return null
+        val taken = placements.filterNot { it.item.id == item.id }.map { it.cell }
+
+        val onSpot = current.copy(width = width, height = height)
+        if (onSpot.withinColumns(columns) && taken.none { it.overlaps(onSpot) }) return onSpot
+
+        for (col in (columns - width) downTo 0) {
+            val candidate = Cell(current.row, col, width, height)
+            if (taken.none { it.overlaps(candidate) }) return candidate
+        }
+        return firstFree(taken, columns, width, height)
+    }
+
     /** Свободно ли место под перенос — с оглядкой на саму переносимую плитку. */
     fun canPlace(placements: List<Placement>, moving: CellItem, cell: Cell, columns: Int): Boolean {
         if (!cell.withinColumns(columns) || cell.row < 0) return false

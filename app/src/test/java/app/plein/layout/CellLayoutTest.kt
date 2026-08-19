@@ -95,4 +95,38 @@ class CellLayoutTest {
         val restored = CellLayout.decode(CellLayout.encode(tiles))
         assertEquals(tiles, restored)
     }
+
+    @Test
+    fun `размер меняется на месте, когда он влезает`() {
+        val media = Placement(CellItem.Tile("media"), Cell(row = 0, col = 0, width = 4, height = 2))
+        val cell = CellLayout.fitResize(listOf(media), media.item, width = 2, height = 2, columns = 4)
+
+        assertEquals(Cell(row = 0, col = 0, width = 2, height = 2), cell)
+    }
+
+    @Test
+    fun `плитка съезжает влево, когда справа не хватает места`() {
+        val media = Placement(CellItem.Tile("media"), Cell(row = 0, col = 2, width = 2, height = 2))
+        val cell = CellLayout.fitResize(listOf(media), media.item, width = 4, height = 2, columns = 4)
+
+        assertEquals(Cell(row = 0, col = 0, width = 4, height = 2), cell)
+    }
+
+    @Test
+    fun `занятая строка уводит плитку в свободную`() {
+        val media = Placement(CellItem.Tile("media"), Cell(row = 0, col = 0, width = 2, height = 2))
+        val note = Placement(CellItem.Tile("note"), Cell(row = 0, col = 2, width = 2, height = 2))
+        val cell = CellLayout.fitResize(listOf(media, note), media.item, width = 4, height = 2, columns = 4)
+
+        assertEquals(4, cell?.width)
+        assertTrue("плитка налезла на соседку", cell?.overlaps(note.cell) == false)
+    }
+
+    @Test
+    fun `размер шире сетки не берётся`() {
+        val media = Placement(CellItem.Tile("media"), Cell(row = 0, col = 0, width = 2, height = 2))
+        val cell = CellLayout.fitResize(listOf(media), media.item, width = 4, height = 2, columns = 3)
+
+        assertEquals(null, cell)
+    }
 }

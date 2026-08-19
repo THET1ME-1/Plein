@@ -64,7 +64,7 @@ class TileDragTest {
                     showLabels = true,
                     editing = false,
                     tileContent = {},
-                    widgetContent = { _, _, _ -> },
+                    widgetContent = { _ -> },
                     onClick = {},
                     onLongClick = {},
                     onTileMenu = {},

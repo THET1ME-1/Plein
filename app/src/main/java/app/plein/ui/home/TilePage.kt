@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.OpenInFull
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Alignment
@@ -73,7 +74,7 @@ fun TilePage(
     showLabels: Boolean,
     editing: Boolean,
     tileContent: @Composable (String) -> Unit,
-    widgetContent: @Composable (Int, Int, Int) -> Unit,
+    widgetContent: @Composable (Int) -> Unit,
     onClick: (AppEntry) -> Unit,
     onLongClick: (AppEntry) -> Unit,
     onTileMenu: (CellItem) -> Unit,
@@ -311,11 +312,7 @@ fun TilePage(
                         ) {
                             when (item) {
                                 is CellItem.Tile -> tileContent(item.kind)
-                                is CellItem.Widget -> widgetContent(
-                                    item.widgetId,
-                                    placement.cell.width,
-                                    placement.cell.height,
-                                )
+                                is CellItem.Widget -> widgetContent(item.widgetId)
                                 else -> Unit
                             }
                         }
@@ -458,6 +455,18 @@ fun TilePage(
                         // Крестик в углу: удаление на виду, а не спрятано в меню.
                       }
                         if (editing) {
+                          // Кнопки живут по углам самой плитки, а не клетки:
+                          // клетка шире на воздух значка, и кружки висели за
+                          // краем заливки.
+                          Box(
+                            Modifier
+                                .fillMaxSize()
+                                .padding(
+                                    start = sideInset,
+                                    end = sideInset,
+                                    bottom = bottomInset,
+                                )
+                          ) {
                             Box(
                                 Modifier
                                     .align(Alignment.TopEnd)
@@ -478,6 +487,33 @@ fun TilePage(
                                     modifier = Modifier.size(16.dp),
                                 )
                             }
+
+                            // Размер тем же нажатием, что и удаление. Пока
+                            // размеры открывались коротким касанием самой
+                            // плитки, о них знал только тот, кто уже вошёл в
+                            // правку и догадался ткнуть ещё раз.
+                            Box(
+                                Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(8.dp)
+                                    .size(28.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.secondaryContainer)
+                                    .testTag("size:${item.id}")
+                                    .clickable {
+                                        haptics.confirm()
+                                        onTileMenu(item)
+                                    },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    Icons.Rounded.OpenInFull,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    modifier = Modifier.size(15.dp),
+                                )
+                            }
+                          }
                         }
                     }
                 }

@@ -56,9 +56,7 @@ class LayoutStore(context: Context) {
 
     fun resize(folderId: String, item: CellItem, width: Int, height: Int, columns: Int): Boolean {
         val current = tiles(folderId)
-        val placement = current.firstOrNull { it.item.id == item.id } ?: return false
-        val wanted = placement.cell.copy(width = width, height = height)
-        if (!CellLayout.canPlace(current, item, wanted, columns)) return false
+        val wanted = CellLayout.fitResize(current, item, width, height, columns) ?: return false
         save(folderId, current.map { if (it.item.id == item.id) it.copy(cell = wanted) else it })
         return true
     }

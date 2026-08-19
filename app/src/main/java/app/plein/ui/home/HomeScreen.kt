@@ -161,7 +161,7 @@ fun HomeScreen(
     onTileMenu: (String, app.plein.data.CellItem) -> Unit = { _, _ -> },
     onTileRemove: (String, app.plein.data.CellItem) -> Unit = { _, _ -> },
     tileContent: @Composable (String) -> Unit = {},
-    widgetContent: @Composable (Int, Int, Int) -> Unit = { _, _, _ -> },
+    widgetContent: @Composable (Int) -> Unit = { _ -> },
     onTileAction: (String) -> Unit = {},
     onAddTile: (String) -> Unit = {},
     onDoubleTap: () -> Unit = {},

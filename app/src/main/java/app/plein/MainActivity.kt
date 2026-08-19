@@ -596,19 +596,8 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                         layoutStore.remove(folderId, item)
                     },
                     onAddTile = { folderId -> addingTileTo = folderId },
-                    widgetContent = { widgetId, width, height ->
-                        app.plein.ui.home.WidgetView(
-                            widgets = widgets,
-                            widgetId = widgetId,
-                            widthCells = width,
-                            heightCells = height,
-                            columns = prefs.columns,
-                            rowHeightDp = app.plein.ui.home.CellMetrics.resolve(
-                                custom = prefs.rowHeight,
-                                columns = prefs.columns,
-                                showLabels = prefs.showLabels,
-                            ).value.toInt(),
-                        )
+                    widgetContent = { widgetId ->
+                        app.plein.ui.home.WidgetView(widgets = widgets, widgetId = widgetId)
                     },
                     onTileAction = { kind ->
                         // Короткое касание плитки ведёт в её приложение;
@@ -912,21 +901,30 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                     } else {
                         app.plein.data.TileSizes.variants(kind)
                     }
+                    // Стоящий размер помечен галочкой: человек видит, что у
+                    // плитки сейчас, а не выбирает вслепую.
+                    val now = layoutStore.tiles(folderId)
+                        .firstOrNull { it.item.id == item.id }?.cell
                     app.plein.ui.settings.ChoiceSheetPublic(
                         title = if (item is app.plein.data.CellItem.Widget) getString(R.string.widgets)
                         else getString(tileTitle(kind)),
                         options = sizes.map { (w, h) -> "$w:$h" to "$w × $h" } +
                             listOf("remove" to getString(R.string.tile_remove)),
-                        selected = "",
+                        selected = now?.let { "${it.width}:${it.height}" }.orEmpty(),
                         onPick = { choice ->
                             if (choice == "remove") {
                                 (item as? app.plein.data.CellItem.Widget)?.let { widgets.release(it.widgetId) }
                                 layoutStore.remove(folderId, item)
+                                haptics.confirm()
                             } else {
                                 val (w, h) = choice.split(':').map { it.toInt() }
-                                layoutStore.resize(folderId, item, w, h, prefs.columns)
+                                // Размер может не влезть: справа стоит другая
+                                // плитка или строка кончилась. Молчать об этом
+                                // нельзя, иначе выглядит как будто выбор не
+                                // сработал вовсе.
+                                val done = layoutStore.resize(folderId, item, w, h, prefs.columns)
+                                if (done) haptics.confirm() else haptics.reject()
                             }
-                            haptics.confirm()
                         },
                         onDismiss = { tileMenu = null },
                     )

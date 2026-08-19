@@ -53,7 +53,7 @@ class AlignmentScreenshotTest : ScreenshotTest() {
                     if (kind == "clock") ClockTile(time = "22:33", date = "СБ, 8 АВГ")
                     else BatteryTile(percent = 81, charging = false)
                 },
-                widgetContent = { _, _, _ -> },
+                widgetContent = { _ -> },
                 onClick = {},
                 onLongClick = {},
                 onTileMenu = {},

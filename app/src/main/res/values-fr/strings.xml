@@ -69,6 +69,9 @@
     <string name="show_weather">Afficher la météo</string>
     <string name="weather">Météo</string>
     <string name="interface_font">Police</string>
+    <string name="font_sample">Aa Bb Éé Çç 123</string>
+    <string name="font_failed">police non chargée</string>
+    <string name="font_provider_missing">Les services Google sont indisponibles, les polices ne se chargeront pas</string>
     <string name="font_search_hint">Rechercher dans Google Fonts</string>
     <string name="about">À propos</string>
     <string name="open_source">Code ouvert</string>
@@ -132,6 +135,9 @@
     <string name="pick_photos_hint">Copiées dans le lanceur</string>
     <string name="pick_folder">Choisir un dossier</string>
     <string name="pick_folder_hint">Toutes ses images</string>
+    <string name="backdrop_theme">Thème de l’image</string>
+    <string name="backdrop_theme_hint">mer, neige, montagnes</string>
+    <string name="backdrop_theme_note">Les mots partent tels quels vers la banque d’images. Vide, le lanceur choisit lui-même. Vos photos et votre dossier ignorent le thème.</string>
     <string name="backdrop_by_time">Selon l\'heure</string>
     <string name="backdrop_by_time_hint">Matin, jour, soir, nuit</string>
     <string name="backdrop_by_weather">Selon la météo</string>

@@ -69,3 +69,37 @@ class WikimediaFitTest {
         assertFalse(WikimediaSource.fitsScreen(0, 0))
     }
 }
+
+/**
+ * Адрес запроса к Викискладу.
+ *
+ * Категории и поиск словами — две разные ветки API. Категорий на «sea» или
+ * «snow» там нет, поэтому своя тема ищется полнотекстово, по файлам-картинкам.
+ */
+class WikimediaUrlTest {
+
+    @Test
+    fun `тема ищется словами среди файлов`() {
+        val url = WikimediaSource.searchUrl("sea rain", width = 1512, offset = 0)
+        assertTrue(url, url.contains("generator=search"))
+        assertTrue(url, url.contains("gsrnamespace=6"))
+        assertTrue("тема потерялась: $url", url.contains("sea+rain") || url.contains("sea%20rain"))
+        assertTrue("нужны растровые картинки: $url", url.contains("filetype%3Abitmap"))
+        assertTrue(url, url.contains("iiurlwidth=1512"))
+    }
+
+    @Test
+    fun `пробелы и кириллица кодируются`() {
+        val url = WikimediaSource.searchUrl("зимний лес", width = 1080, offset = 50)
+        assertFalse("пробел ушёл в адрес сырым: $url", url.contains(" "))
+        assertTrue(url, url.contains("gsroffset=50"))
+    }
+
+    @Test
+    fun `категория ищется по своей ветке`() {
+        val url = WikimediaSource.categoryUrl("Category:Quality images of sunsets", width = 1080, from = "a")
+        assertTrue(url, url.contains("generator=categorymembers"))
+        assertTrue(url, url.contains("gcmtype=file"))
+        assertFalse("категория не должна ходить поиском: $url", url.contains("generator=search"))
+    }
+}

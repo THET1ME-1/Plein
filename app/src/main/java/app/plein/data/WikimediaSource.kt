@@ -39,10 +39,17 @@ class WikimediaSource(private val context: Context) {
         val license: String,
     )
 
+    /**
+     * Следующий кадр.
+     *
+     * @param search слова своей темы. Пустой список означает подбор по
+     * категориям: своей темы человек не задавал.
+     */
     suspend fun next(
         dark: Boolean,
         categories: List<String> = LANDSCAPES,
         screenWidth: Int = 1080,
+        search: List<String> = emptyList(),
         onProgress: (Float) -> Unit = {},
     ): Backdrop? = withContext(Dispatchers.IO) {
         var spare: Backdrop? = null
@@ -50,7 +57,10 @@ class WikimediaSource(private val context: Context) {
 
         repeat(3) {
             if (pool.isEmpty()) {
-                runCatching { search(categories.random(), screenWidth) }
+                runCatching {
+                    if (search.isEmpty()) fromCategory(categories.random(), screenWidth)
+                    else fromSearch(search.random(), screenWidth)
+                }
                     .onFailure { lastError = it.reason() }
                     .getOrDefault(emptyList())
                     .let { pool.addAll(it.shuffled()) }
@@ -96,17 +106,21 @@ class WikimediaSource(private val context: Context) {
      * Берём сразу пятьсот — в категориях по две-три сотни файлов и больше,
      * а полсотни кончались за вечер.
      */
-    private fun search(category: String, screenWidth: Int): List<Shot> {
-        val width = (screenWidth * 1.4f).toInt().coerceIn(720, 2000)
-        val from = ALPHABET.random()
-        val url = URL(
-            "https://commons.wikimedia.org/w/api.php?action=query&format=json" +
-                "&generator=categorymembers&gcmtitle=" + URLEncoder.encode(category, "UTF-8") +
-                // Пятьсот за раз: это потолок для обычного клиента, ответ
-                // весит около двухсот килобайт и заменяет десяток запросов.
-                "&gcmtype=file&gcmlimit=500&gcmstartsortkeyprefix=$from" +
-                "&prop=imageinfo&iiprop=url%7Cextmetadata%7Csize&iiurlwidth=$width"
-        )
+    private fun fromCategory(category: String, screenWidth: Int): List<Shot> =
+        shots(categoryUrl(category, widthFor(screenWidth), ALPHABET.random().toString()))
+
+    /**
+     * Снимки по словам своей темы.
+     *
+     * Категорий на «sea» или «snow» на Викискладе нет, поэтому тема ищется
+     * полнотекстово. Смещение случайное: без него человек видел бы одну и ту же
+     * первую полусотню файлов, пока она не кончится.
+     */
+    private fun fromSearch(query: String, screenWidth: Int): List<Shot> =
+        shots(searchUrl(query, widthFor(screenWidth), OFFSETS.random()))
+
+    private fun shots(address: String): List<Shot> {
+        val url = URL(address)
         val connection = (url.openConnection() as HttpURLConnection).apply {
             connectTimeout = 8000
             readTimeout = 12000
@@ -198,6 +212,38 @@ class WikimediaSource(private val context: Context) {
     companion object {
         /** Правило Викисклада: клиент обязан представиться и оставить ссылку. */
         const val USER_AGENT = "PleinLauncher/0.3 (https://github.com/THET1ME-1/Plein)"
+
+        private const val API = "https://commons.wikimedia.org/w/api.php?action=query&format=json"
+        private const val IMAGE_INFO = "&prop=imageinfo&iiprop=url%7Cextmetadata%7Csize&iiurlwidth="
+
+        /** Ширина превью: полтора экрана хватает, оригинал тянуть незачем. */
+        fun widthFor(screenWidth: Int): Int = (screenWidth * 1.4f).toInt().coerceIn(720, 2000)
+
+        /**
+         * Адрес выдачи по категории.
+         *
+         * Срез берём со случайной буквы: без неё выдача одна и та же от запроса
+         * к запросу, и как только показаны все, категория молчит навсегда.
+         * Пятьсот за раз — потолок для обычного клиента, ответ весит около
+         * двухсот килобайт и заменяет десяток запросов.
+         */
+        fun categoryUrl(category: String, width: Int, from: String): String =
+            API + "&generator=categorymembers&gcmtitle=" + URLEncoder.encode(category, "UTF-8") +
+                "&gcmtype=file&gcmlimit=500&gcmstartsortkeyprefix=$from" + IMAGE_INFO + width
+
+        /**
+         * Адрес поиска по словам.
+         *
+         * Пространство имён 6 — файлы, `filetype:bitmap` отсекает схемы, ноты и
+         * прочие SVG, которые в шапку лаунчера не годятся. Полсотни за раз —
+         * потолок поиска, больше он не отдаёт.
+         */
+        fun searchUrl(query: String, width: Int, offset: Int): String =
+            API + "&generator=search&gsrsearch=" +
+                URLEncoder.encode("filetype:bitmap $query", "UTF-8") +
+                "&gsrnamespace=6&gsrlimit=50&gsroffset=$offset" + IMAGE_INFO + width
+
+        private val OFFSETS = listOf(0, 0, 50, 100, 150)
 
         /**
          * Годится ли кадр шапке.

@@ -23,3 +23,13 @@ private val provider = GoogleFont.Provider(
 fun googleFontFamily(name: String): FontFamily = remember(name) {
     FontFamily(Font(googleFont = GoogleFont(name), fontProvider = provider))
 }
+
+/**
+ * Отвечает ли провайдер шрифтов на этом телефоне.
+ *
+ * Без сервисов Google семейство не приедет никогда, и список выбора выглядит
+ * как девяносто девять одинаковых строк: Compose молча подставляет запасной
+ * шрифт. Лучше сказать об этом прямо, чем показывать список-обманку.
+ */
+fun googleFontsAvailable(context: android.content.Context): Boolean =
+    context.packageManager.resolveContentProvider("com.google.android.gms.fonts", 0) != null

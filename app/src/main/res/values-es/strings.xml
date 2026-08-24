@@ -69,6 +69,9 @@
     <string name="show_weather">Mostrar el tiempo</string>
     <string name="weather">Tiempo</string>
     <string name="interface_font">Fuente</string>
+    <string name="font_sample">Aa Bb Ññ Áá 123</string>
+    <string name="font_failed">la fuente no cargó</string>
+    <string name="font_provider_missing">Los servicios de Google no están disponibles, las fuentes no se cargarán</string>
     <string name="font_search_hint">Buscar en Google Fonts</string>
     <string name="about">Acerca de</string>
     <string name="open_source">Código abierto</string>
@@ -132,6 +135,9 @@
     <string name="pick_photos_hint">Se copian al lanzador</string>
     <string name="pick_folder">Elegir carpeta</string>
     <string name="pick_folder_hint">Cualquier imagen de ella</string>
+    <string name="backdrop_theme">Tema de la foto</string>
+    <string name="backdrop_theme_hint">mar, nieve, montañas</string>
+    <string name="backdrop_theme_note">Las palabras van a la fototeca tal cual. Vacío significa que el lanzador elige solo. Tus fotos y tu carpeta ignoran el tema.</string>
     <string name="backdrop_by_time">Por hora del día</string>
     <string name="backdrop_by_time_hint">Mañana, día, tarde, noche</string>
     <string name="backdrop_by_weather">Por el tiempo</string>

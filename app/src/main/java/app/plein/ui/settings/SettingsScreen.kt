@@ -645,6 +645,29 @@ fun SettingsScreen(
                         place = RowPlace.Middle,
                         onClick = onPickFolder,
                     )
+                    // Своя тема стоит над переключателями: она ведёт запрос, а
+                    // погода и время лишь добавляют к ней слово.
+                    SettingsPanel(title = stringResource(R.string.backdrop_theme), place = RowPlace.Middle) {
+                        PlainField(
+                            value = prefs.backdropTheme,
+                            onValueChange = { prefs.updateBackdropTheme(it) },
+                            placeholder = stringResource(R.string.backdrop_theme_hint),
+                            leading = {
+                                Icon(
+                                    Icons.Rounded.Search,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Text(
+                            text = stringResource(R.string.backdrop_theme_note),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 8.dp),
+                        )
+                    }
                     SettingsToggleRow(
                         icon = Icons.Rounded.Schedule,
                         title = stringResource(R.string.backdrop_by_time),

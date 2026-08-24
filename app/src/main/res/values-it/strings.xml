@@ -69,6 +69,9 @@
     <string name="show_weather">Mostra il meteo</string>
     <string name="weather">Meteo</string>
     <string name="interface_font">Carattere</string>
+    <string name="font_sample">Aa Bb Èè Àà 123</string>
+    <string name="font_failed">carattere non caricato</string>
+    <string name="font_provider_missing">I servizi Google non sono disponibili, i caratteri non si caricheranno</string>
     <string name="font_search_hint">Cerca in Google Fonts</string>
     <string name="about">Informazioni</string>
     <string name="open_source">Codice aperto</string>
@@ -132,6 +135,9 @@
     <string name="pick_photos_hint">Copiate nel launcher</string>
     <string name="pick_folder">Scegli cartella</string>
     <string name="pick_folder_hint">Qualsiasi immagine dentro</string>
+    <string name="backdrop_theme">Tema della foto</string>
+    <string name="backdrop_theme_hint">mare, neve, montagne</string>
+    <string name="backdrop_theme_note">Le parole vanno alla fototeca così come sono. Vuoto significa che il launcher sceglie da solo. Le tue foto e la cartella ignorano il tema.</string>
     <string name="backdrop_by_time">Per ora del giorno</string>
     <string name="backdrop_by_time_hint">Mattina, giorno, sera, notte</string>
     <string name="backdrop_by_weather">Per il tempo</string>

@@ -247,6 +247,20 @@ class Prefs(context: Context) {
         sp.edit().putString(KEY_BACKDROP_FOLDER, value).apply()
     }
 
+    /**
+     * Своя тема кадра: что человек хочет видеть на фоне.
+     *
+     * Слова уходят в фотобанк как есть, несколько тем разделяются запятой.
+     * Пусто — прежнее поведение, лаунчер подбирает сам.
+     */
+    var backdropTheme by mutableStateOf(sp.getString(KEY_BACKDROP_THEME, null).orEmpty())
+        private set
+
+    fun updateBackdropTheme(value: String) {
+        backdropTheme = value
+        sp.edit().putString(KEY_BACKDROP_THEME, value).apply()
+    }
+
     /** Кадр под время суток. */
     var backdropByTime by mutableStateOf(sp.getBoolean(KEY_BACKDROP_TIME, true))
         private set
@@ -490,6 +504,7 @@ class Prefs(context: Context) {
         const val KEY_UPDATE_CHECKED = "update_checked"
         const val KEY_BACKDROP_ORIGIN = "backdrop_origin"
         const val KEY_BACKDROP_FOLDER = "backdrop_folder"
+        const val KEY_BACKDROP_THEME = "backdrop_theme"
         const val KEY_BACKDROP_TIME = "backdrop_by_time"
         const val KEY_BACKDROP_WEATHER = "backdrop_by_weather"
         const val KEY_BACKDROP_WIFI = "backdrop_wifi_only"

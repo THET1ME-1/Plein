@@ -69,6 +69,9 @@
     <string name="show_weather">Show weather</string>
     <string name="weather">Weather</string>
     <string name="interface_font">Interface font</string>
+    <string name="font_sample">Aa Bb Cc 0123</string>
+    <string name="font_failed">font did not load</string>
+    <string name="font_provider_missing">Google services are unavailable, so fonts will not load</string>
     <string name="font_search_hint">Search Google Fonts</string>
     <string name="about">About</string>
     <string name="open_source">Open source</string>
@@ -132,6 +135,9 @@
     <string name="pick_photos_hint">Copied into the launcher</string>
     <string name="pick_folder">Pick a folder</string>
     <string name="pick_folder_hint">Any images from it</string>
+    <string name="backdrop_theme">Photo theme</string>
+    <string name="backdrop_theme_hint">sea, snow, mountains</string>
+    <string name="backdrop_theme_note">Words go to the photo bank as they are. Empty means the launcher picks by itself. Your own photos and folder ignore the theme.</string>
     <string name="backdrop_by_time">By time of day</string>
     <string name="backdrop_by_time_hint">Morning, day, evening, night</string>
     <string name="backdrop_by_weather">By weather</string>

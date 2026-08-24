@@ -171,6 +171,48 @@ object BackdropQueries {
         DayPart.Night -> night
     }
 
+    /**
+     * Тема, которую человек вписал в настройках, разобранная в отдельные слова.
+     *
+     * Разделяем запятой, точкой с запятой и переводом строки: «sea, snow» — это
+     * два запроса, а не один длинный. Пустые куски выбрасываем, иначе лишняя
+     * запятая породила бы запрос в никуда.
+     */
+    fun themeWords(raw: String): List<String> =
+        raw.split(',', ';', '\n')
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+
+    /**
+     * Приклеивает к теме короткую подсказку: «sea» плюс дождь даёт «sea rain».
+     *
+     * Целая фраза сюда не годится: «sea rain window city» фотобанк почти не
+     * находит. Если подсказки нет, тема идёт как есть.
+     */
+    fun combine(theme: List<String>, hint: String?): List<String> =
+        if (hint.isNullOrBlank()) theme else theme.map { "$it ${hint.trim()}" }
+
+    /** Погода одним словом — для склейки с темой. */
+    fun weatherWord(code: Int): String? = when (code) {
+        0, 1 -> "clear sky"
+        2, 3 -> "clouds"
+        45, 48 -> "fog"
+        in 51..67, in 80..82, in 95..99 -> "rain"
+        in 71..77, 85, 86 -> "snow"
+        else -> null
+    }
+
+    /**
+     * Время суток одним словом. Днём слова нет: «sea day» — это не про свет,
+     * а про календарь, и фотобанк отдаёт по нему что попало.
+     */
+    fun timeWord(part: DayPart): String? = when (part) {
+        DayPart.Morning -> "sunrise"
+        DayPart.Day -> null
+        DayPart.Evening -> "sunset"
+        DayPart.Night -> "night"
+    }
+
     /** Коды Open-Meteo: 0 ясно, 45 туман, 51–67 дождь, 71–86 снег, 95+ гроза. */
     fun forWeather(code: Int): List<String>? = when (code) {
         0, 1 -> byWeather["clear"]

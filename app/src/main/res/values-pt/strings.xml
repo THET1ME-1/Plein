@@ -69,6 +69,9 @@
     <string name="show_weather">Mostrar meteorologia</string>
     <string name="weather">Meteorologia</string>
     <string name="interface_font">Tipo de letra</string>
+    <string name="font_sample">Aa Bb Ãã Çç 123</string>
+    <string name="font_failed">a fonte não carregou</string>
+    <string name="font_provider_missing">Os serviços Google estão indisponíveis, as fontes não vão carregar</string>
     <string name="font_search_hint">Pesquisar no Google Fonts</string>
     <string name="about">Sobre</string>
     <string name="open_source">Código aberto</string>
@@ -132,6 +135,9 @@
     <string name="pick_photos_hint">Copiadas para o launcher</string>
     <string name="pick_folder">Escolher pasta</string>
     <string name="pick_folder_hint">Quaisquer imagens dela</string>
+    <string name="backdrop_theme">Tema da foto</string>
+    <string name="backdrop_theme_hint">mar, neve, montanhas</string>
+    <string name="backdrop_theme_note">As palavras vão para o banco de imagens como estão. Vazio significa que o launcher escolhe sozinho. Suas fotos e pasta ignoram o tema.</string>
     <string name="backdrop_by_time">Pela hora do dia</string>
     <string name="backdrop_by_time_hint">Manhã, dia, tarde, noite</string>
     <string name="backdrop_by_weather">Pelo tempo</string>

@@ -69,6 +69,9 @@
     <string name="show_weather">Показувати погоду</string>
     <string name="weather">Погода</string>
     <string name="interface_font">Шрифт інтерфейсу</string>
+    <string name="font_sample">Аа Бб Aa Bb 123</string>
+    <string name="font_failed">шрифт не завантажився</string>
+    <string name="font_provider_missing">Сервіси Google недоступні, шрифти не завантажаться</string>
     <string name="font_search_hint">Пошук у Google Fonts</string>
     <string name="about">Про програму</string>
     <string name="open_source">Відкритий код</string>
@@ -132,6 +135,9 @@
     <string name="pick_photos_hint">Копіюються в лаунчер</string>
     <string name="pick_folder">Вибрати теку</string>
     <string name="pick_folder_hint">Будь-які знімки з неї</string>
+    <string name="backdrop_theme">Тема кадру</string>
+    <string name="backdrop_theme_hint">море, сніг, гори</string>
+    <string name="backdrop_theme_note">Слова йдуть у фотобанк як є. Порожньо — лаунчер добирає сам. Власні знімки та тека тему не дивляться.</string>
     <string name="backdrop_by_time">За часом доби</string>
     <string name="backdrop_by_time_hint">Ранок, день, вечір, ніч</string>
     <string name="backdrop_by_weather">За погодою</string>

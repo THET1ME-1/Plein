@@ -69,6 +69,9 @@
     <string name="show_weather">Wetter zeigen</string>
     <string name="weather">Wetter</string>
     <string name="interface_font">Schriftart</string>
+    <string name="font_sample">Aa Bb Öö Ää 123</string>
+    <string name="font_failed">Schrift nicht geladen</string>
+    <string name="font_provider_missing">Google-Dienste sind nicht verfügbar, Schriften laden nicht</string>
     <string name="font_search_hint">Google Fonts durchsuchen</string>
     <string name="about">Über die App</string>
     <string name="open_source">Offener Code</string>
@@ -132,6 +135,9 @@
     <string name="pick_photos_hint">Werden kopiert</string>
     <string name="pick_folder">Ordner wählen</string>
     <string name="pick_folder_hint">Alle Bilder daraus</string>
+    <string name="backdrop_theme">Bildthema</string>
+    <string name="backdrop_theme_hint">Meer, Schnee, Berge</string>
+    <string name="backdrop_theme_note">Die Wörter gehen unverändert an die Fotobank. Leer heißt: Der Launcher wählt selbst. Eigene Fotos und Ordner ignorieren das Thema.</string>
     <string name="backdrop_by_time">Nach Tageszeit</string>
     <string name="backdrop_by_time_hint">Morgen, Tag, Abend, Nacht</string>
     <string name="backdrop_by_weather">Nach Wetter</string>

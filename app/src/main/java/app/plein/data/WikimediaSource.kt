@@ -211,7 +211,7 @@ class WikimediaSource(private val context: Context) {
 
     companion object {
         /** Правило Викисклада: клиент обязан представиться и оставить ссылку. */
-        const val USER_AGENT = "PleinLauncher/0.3 (https://github.com/THET1ME-1/Plein)"
+        const val USER_AGENT = "PleinLauncher/0.10 (https://github.com/THET1ME-1/Plein)"
 
         private const val API = "https://commons.wikimedia.org/w/api.php?action=query&format=json"
         private const val IMAGE_INFO = "&prop=imageinfo&iiprop=url%7Cextmetadata%7Csize&iiurlwidth="

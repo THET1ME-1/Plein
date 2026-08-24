@@ -43,6 +43,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
@@ -78,6 +80,7 @@ import app.plein.ui.rememberHaptics
 import app.plein.ui.theme.Emphasized
 import app.plein.ui.theme.MonoFont
 import app.plein.ui.theme.SheetCorner
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 private val BackdropHeight = 300.dp
 private val BackdropCollapsed = 92.dp
@@ -192,25 +195,25 @@ fun HomeScreen(
     var shift by remember { mutableFloatStateOf(0f) }
     val progress = if (maxShift == 0f) 0f else (shift / maxShift).coerceIn(0f, 1f)
 
-    // Ход оттягивания.
+    // Ход оттягивания живёт в PullState: и число, и возврат.
     //
-    // Значение живёт обычным состоянием и меняется прямо в обработчике, а
-    // возврат анимируется внутри onPreFling — она и так suspend. Раньше и
-    // движение, и возврат шли через launch: отложенный snapTo прилетал после
-    // animateTo, отменял его, и лист застывал оттянутым с мёртвым кругом.
+    // Возврат анимируется в области экрана, а не внутри onPreFling. Та корутина
+    // принадлежит скроллу: положил палец обратно посреди анимации — система
+    // обрывала инерцию вместе с ней, ход застывал на полпути, лист висел
+    // сдвинутым с мёртвым кругом, и следующий жест начинался из ниоткуда.
+    // Заодно onPreFling больше не ждёт конца пружины и не задерживает инерцию
+    // списка на секунду.
     val pullLimit = with(density) { PullTravel.toPx() }
-    var pull by remember { mutableFloatStateOf(0f) }
+    val pullScope = rememberCoroutineScope()
+    val pull = remember(pullLimit) { PullState(pullScope, pullLimit) }
 
-    val nested = remember(maxShift, pullLimit) {
+    val nested = remember(maxShift, pull) {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
                 // Оттянутый лист сначала встаёт на место и только потом отдаёт
                 // движение списку: иначе он дёргался на полпути.
-                if (available.y < 0f && pull > 0f) {
-                    val next = (pull + available.y).coerceAtLeast(0f)
-                    val used = next - pull
-                    pull = next
-                    return Offset(0f, used)
+                if (available.y < 0f && pull.value > 0f) {
+                    return Offset(0f, pull.giveBack(available.y))
                 }
                 val delta = -available.y
                 val next = (shift + delta).coerceIn(0f, maxShift)
@@ -229,7 +232,7 @@ fun HomeScreen(
                 if (source != NestedScrollSource.UserInput || shift > 0f || available.y <= 0f) {
                     return Offset.Zero
                 }
-                pull = PullPhysics.accumulate(pull, available.y, pullLimit)
+                pull.drag(available.y)
                 return Offset(0f, available.y)
             }
 
@@ -238,31 +241,17 @@ fun HomeScreen(
              *
              * Жест иногда обрывается так, что onPreFling не приходит вовсе:
              * без этой страховки лист оставался оттянутым, и следующий свайп
-             * ничего не запускал. Раньше страховка висела на LaunchedEffect с
-             * ключом по самому ходу — она перезапускала себя от собственной
-             * анимации и дёргала лист вместо возврата.
+             * ничего не запускал.
              */
             override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
-                if (pull > 0f) {
-                    animate(
-                        initialValue = pull,
-                        targetValue = 0f,
-                        animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessLow),
-                    ) { value, _ -> pull = value }
-                }
+                pull.settle()
                 return Velocity.Zero
             }
 
             override suspend fun onPreFling(available: Velocity): Velocity {
-                if (pull <= 0f) return Velocity.Zero
                 // Хватает почти полного круга: добрать последние проценты
                 // мешает та же резина.
-                if (pull >= pullLimit * PullPhysics.TRIGGER) onPullRefresh()
-                animate(
-                    initialValue = pull,
-                    targetValue = 0f,
-                    animationSpec = spring(dampingRatio = 0.58f, stiffness = Spring.StiffnessLow),
-                ) { value, _ -> pull = value }
+                if (pull.release()) onPullRefresh()
                 return Velocity.Zero
             }
         }
@@ -273,9 +262,12 @@ fun HomeScreen(
     // Щелчок на смене папки и на дотянутом жесте: рука понимает, что
     // произошло, не разглядывая экран.
     LaunchedEffect(currentPage) { haptics.tick() }
-    val reached = pull >= pullLimit * PullPhysics.TRIGGER
-    LaunchedEffect(reached) {
-        if (reached) haptics.threshold()
+    // Порог слушаем снимками: сравнение в теле композиции пересобирало бы
+    // домашний экран на каждом кадре жеста.
+    LaunchedEffect(pull) {
+        snapshotFlow { pull.reached }
+            .distinctUntilChanged()
+            .collect { if (it) haptics.threshold() }
     }
 
     // Сетка идёт от ширины экрана: на планшете и раскрытой раскладушке
@@ -310,15 +302,19 @@ fun HomeScreen(
             onOpenSettings = onOpenSettings,
             onSeedExtracted = onSeedExtracted,
             collapse = progress,
-            pull = ((pull / pullLimit - PullDeadZone) / (PullPhysics.TRIGGER - PullDeadZone))
-                .coerceIn(0f, 1f),
+            // Ход отдаём лямбдой: значением он пересобирал бы кадр и всю
+            // шапку на каждом пикселе жеста.
+            pull = {
+                ((pull.value / pullLimit - PullDeadZone) / (PullPhysics.TRIGGER - PullDeadZone))
+                    .coerceIn(0f, 1f)
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(BackdropHeight)
                 .graphicsLayer {
                     // Фон отстаёт сильно и слегка наезжает: так глубина видна,
                     // а не читается как простое затемнение.
-                    translationY = -shift * 0.28f + pull * 0.4f
+                    translationY = -shift * 0.28f + pull.value * 0.4f
                     val zoom = 1f + progress * 0.12f
                     scaleX = zoom
                     scaleY = zoom
@@ -331,7 +327,7 @@ fun HomeScreen(
         Column(
             Modifier
                 .fillMaxSize()
-                .graphicsLayer { translationY = pull }
+                .graphicsLayer { translationY = pull.value }
         ) {
 
             Spacer(

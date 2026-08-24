@@ -27,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -77,7 +78,7 @@ fun Backdrop(
     weatherCode: Int,
     onWeatherClick: () -> Unit = {},
     collapse: Float = 0f,
-    pull: Float = 0f,
+    pull: () -> Float = { 0f },
     clockFont: String,
     onShuffle: () -> Unit,
     loading: Boolean = false,
@@ -178,7 +179,11 @@ fun Backdrop(
                 )
         )
 
-        if (pull > 0.02f || loading) {
+        // Ход читаем производным состоянием: сравнение с порогом прямо в теле
+        // пересобирало бы шапку на каждом пикселе жеста. Само число уходит в
+        // индикатор лямбдой и рекомпозиции не просит вовсе.
+        val pulling by remember { derivedStateOf { pull() > 0.02f } }
+        if (pulling || loading) {
             // Стандартный индикатор Material 3: круглая плашка, внутри
             // перебираются фигуры. Под пальцем он показывает ход жеста,
             // после — крутится сам, пока едет кадр.
@@ -212,7 +217,7 @@ fun Backdrop(
                 }
             } else {
                 ContainedLoadingIndicator(
-                    progress = { pull.coerceIn(0f, 1f) },
+                    progress = { pull().coerceIn(0f, 1f) },
                     modifier = indicator,
                     containerColor = container,
                     indicatorColor = Color.White,

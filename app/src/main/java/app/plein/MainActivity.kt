@@ -151,7 +151,6 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
             var menuFor by remember { mutableStateOf<AppEntry?>(null) }
             var editing by remember { mutableStateOf(false) }
             var isDefault by remember { mutableStateOf(DefaultLauncher.isDefault(context)) }
-            var loadingBackdrop by remember { mutableStateOf(false) }
             var backdropProgress by remember { mutableFloatStateOf(0f) }
             var backdropFailure by remember { mutableStateOf<String?>(null) }
             var tileMenu by remember { mutableStateOf<Pair<String, app.plein.data.CellItem>?>(null) }
@@ -198,37 +197,35 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
             }
             val scope = rememberCoroutineScope()
 
-            // Один запрос за раз: пока кадр едет, кнопка и жест молчат. Иначе
-            // два ответа подряд перебивали друг друга, а индикатор не гас.
+            // Один запрос за раз, но новый перебивает начатый: пока кадр ехал,
+            // кнопка и жест молчали до самого таймаута, и при молчащей сети
+            // человек стоял у мёртвого кругатри четверти минуты.
+            val requests = remember(scope) { app.plein.data.BackdropRequest(scope) }
             val loadBackdrop: () -> Unit = {
-                if (!loadingBackdrop) {
-                    scope.launch {
-                        loadingBackdrop = true
-                        try {
-                            backdropProgress = 0f
-                            // Потолок по времени: без него зависший запрос
-                            // оставлял индикатор навсегда, и жест больше не
-                            // запускал загрузку.
-                            val fresh = kotlinx.coroutines.withTimeoutOrNull(45_000) {
-                                backdropPicker.next(backdrop, dark, weatherCode) { done ->
-                                    backdropProgress = done
-                                }
+                requests.start {
+                    try {
+                        backdropProgress = 0f
+                        // Потолок по времени: без него зависший запрос
+                        // оставлял индикатор навсегда, и жест больше не
+                        // запускал загрузку.
+                        val fresh = kotlinx.coroutines.withTimeoutOrNull(45_000) {
+                            backdropPicker.next(backdrop, dark, weatherCode) { done ->
+                                backdropProgress = done
                             }
-                            if (fresh != null) {
-                                backdrop = fresh
-                                prefs.saveBackdrop(backdrop)
-                            }
-                            backdropFailure = backdropPicker.lastFailure
-                                ?: if (fresh == null) "сеть не ответила за 45 секунд" else null
-                            backdropFailure?.let { reason ->
-                                android.widget.Toast.makeText(
-                                    context, reason, android.widget.Toast.LENGTH_SHORT,
-                                ).show()
-                            }
-                        } finally {
-                            loadingBackdrop = false
-                            backdropProgress = 0f
                         }
+                        if (fresh != null) {
+                            backdrop = fresh
+                            prefs.saveBackdrop(backdrop)
+                        }
+                        backdropFailure = backdropPicker.lastFailure
+                            ?: if (fresh == null) "сеть не ответила за 45 секунд" else null
+                        backdropFailure?.let { reason ->
+                            android.widget.Toast.makeText(
+                                context, reason, android.widget.Toast.LENGTH_SHORT,
+                            ).show()
+                        }
+                    } finally {
+                        backdropProgress = 0f
                     }
                 }
             }
@@ -566,7 +563,7 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                     editing = editing,
                     // Нажатие идёт в фотобанк за новым кадром; без сети остаются вшитые.
                     onShuffleBackdrop = loadBackdrop,
-                    loadingBackdrop = loadingBackdrop,
+                    loadingBackdrop = requests.running,
                     loadingProgress = backdropProgress,
                     onSeedExtracted = {
                         seed = it

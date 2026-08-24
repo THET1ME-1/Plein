@@ -121,7 +121,22 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
             val apps = remember(allApps, hiddenApps.keys, hiddenApps.unlocked) {
                 if (hiddenApps.unlocked) allApps else hiddenApps.visible(allApps)
             }
-            val dark = prefs.themeMode.isDark(isSystemInDarkTheme())
+            // Час нужен и папке «Сейчас», и расписанию темы: сменился —
+            // состав папки пересобирается, а «по времени» переключает режим.
+            // Время только через rememberNow, иначе оно застынет на минуте
+            // запуска, как когда-то часы на кадре.
+            val folderNow = app.plein.ui.home.rememberNow()
+            val folderHour = remember(folderNow) {
+                java.util.Calendar.getInstance().apply { time = folderNow }
+                    .get(java.util.Calendar.HOUR_OF_DAY)
+            }
+            // Режим «по времени» ждёт восьми вечера и семи утра, поэтому час
+            // стоит в ключах: без него дневная тема держалась до перезапуска
+            // лаунчера, а вместе с ней и дневной кадр.
+            val systemDark = isSystemInDarkTheme()
+            val dark = remember(prefs.themeMode, systemDark, folderHour) {
+                prefs.themeMode.isDark(systemDark, folderNow)
+            }
 
             var seed by remember { mutableStateOf(DefaultSeed) }
             // Плитка знает, что играет, а открывать плеер приходится странице:
@@ -470,14 +485,6 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                         android.widget.Toast.LENGTH_SHORT,
                     ).show()
                 }
-            }
-            // Час нужен папке «Сейчас»: сменился — состав пересобирается.
-            // Время только через rememberNow, иначе оно застынет на минуте
-            // запуска, как когда-то часы на кадре.
-            val folderNow = app.plein.ui.home.rememberNow()
-            val folderHour = remember(folderNow) {
-                java.util.Calendar.getInstance().apply { time = folderNow }
-                    .get(java.util.Calendar.HOUR_OF_DAY)
             }
             LaunchedEffect(apps, folderHour) {
                 folderStore.seedIfEmpty(apps)

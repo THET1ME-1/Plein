@@ -30,16 +30,30 @@ enum class Vibrancy(val titleRes: Int) {
     Fidelity(R.string.vibrancy_fidelity),
 }
 
-/** Тёмная тема по режиму: AutoTime включает её с 20:00 до 07:00. */
-fun ThemeMode.isDark(systemDark: Boolean): Boolean = when (this) {
-    ThemeMode.Light -> false
-    ThemeMode.Dark -> true
-    ThemeMode.System -> systemDark
-    ThemeMode.AutoTime -> {
-        val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
-        hour >= 20 || hour < 7
+/** Час, с которого AutoTime гасит экран, и час, на котором возвращает свет. */
+const val NightFrom = 20
+const val NightUntil = 7
+
+/**
+ * Тёмная тема по режиму: AutoTime включает её с 20:00 до 07:00.
+ *
+ * Момент приходит снаружи и по умолчанию берётся из системных часов. Считать
+ * его внутри нельзя: композиция запомнит час сборки экрана, восьми вечера
+ * лаунчер не заметит и за новым кадром не пойдёт, пока его не пересоздадут.
+ * На домашнем экране сюда приезжает `rememberNow()`.
+ */
+fun ThemeMode.isDark(systemDark: Boolean, now: java.util.Date = java.util.Date()): Boolean =
+    when (this) {
+        ThemeMode.Light -> false
+        ThemeMode.Dark -> true
+        ThemeMode.System -> systemDark
+        ThemeMode.AutoTime -> {
+            val hour = java.util.Calendar.getInstance()
+                .apply { time = now }
+                .get(java.util.Calendar.HOUR_OF_DAY)
+            hour >= NightFrom || hour < NightUntil
+        }
     }
-}
 
 val DefaultSeed = Color(0xFF2E5D73)
 

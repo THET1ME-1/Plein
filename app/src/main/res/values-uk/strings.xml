@@ -269,4 +269,6 @@
     <string name="ring_default">Тека</string>
     <string name="ring_empty">Поки порожньо — виберіть застосунки</string>
     <string name="ring_done">Готово</string>
+    <string name="widget_pin_title">Поставити віджет?</string>
+    <string name="widget_pin_add">Поставити</string>
 </resources>

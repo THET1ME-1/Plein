@@ -269,4 +269,6 @@
     <string name="ring_default">Cartella</string>
     <string name="ring_empty">Ancora vuota: scegli le app</string>
     <string name="ring_done">Fatto</string>
+    <string name="widget_pin_title">Aggiungere il widget?</string>
+    <string name="widget_pin_add">Aggiungi</string>
 </resources>

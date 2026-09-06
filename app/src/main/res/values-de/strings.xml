@@ -269,4 +269,6 @@
     <string name="ring_default">Ordner</string>
     <string name="ring_empty">Noch leer — App auswählen</string>
     <string name="ring_done">Fertig</string>
+    <string name="widget_pin_title">Widget hinzufügen?</string>
+    <string name="widget_pin_add">Hinzufügen</string>
 </resources>

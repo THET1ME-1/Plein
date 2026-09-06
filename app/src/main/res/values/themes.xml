@@ -10,4 +10,17 @@
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowContentTransitions">false</item>
     </style>
+
+    <!-- Подтверждение закрепления виджета: лист снизу поверх чужого экрана,
+         поэтому окно прозрачное и без своей анимации входа. -->
+    <style name="Theme.Plein.Transparent" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
 </resources>

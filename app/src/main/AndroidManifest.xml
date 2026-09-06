@@ -57,6 +57,22 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- Закрепление виджета по просьбе самого приложения.
+             Система считает лаунчер способным на это только по наличию этого
+             приёмника: без него isRequestPinAppWidgetSupported() возвращает
+             false, и чужие приложения отвечают, что виджеты не поддерживаются. -->
+        <activity
+            android:name=".PinWidgetActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.Plein.Transparent">
+            <intent-filter>
+                <action android:name="android.content.pm.action.CONFIRM_PIN_APPWIDGET" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
         <receiver
             android:name=".RestartReceiver"
             android:enabled="true"

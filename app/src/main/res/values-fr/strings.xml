@@ -269,4 +269,6 @@
     <string name="ring_default">Dossier</string>
     <string name="ring_empty">Encore vide — choisissez des applis</string>
     <string name="ring_done">Terminé</string>
+    <string name="widget_pin_title">Ajouter le widget ?</string>
+    <string name="widget_pin_add">Ajouter</string>
 </resources>

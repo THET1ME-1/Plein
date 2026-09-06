@@ -269,4 +269,6 @@
     <string name="ring_default">Carpeta</string>
     <string name="ring_empty">Aún vacía: elige apps</string>
     <string name="ring_done">Listo</string>
+    <string name="widget_pin_title">¿Añadir el widget?</string>
+    <string name="widget_pin_add">Añadir</string>
 </resources>

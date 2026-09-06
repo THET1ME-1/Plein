@@ -269,4 +269,6 @@
     <string name="ring_default">Folder</string>
     <string name="ring_empty">Empty yet — pick the apps</string>
     <string name="ring_done">Done</string>
+    <string name="widget_pin_title">Add the widget?</string>
+    <string name="widget_pin_add">Add</string>
 </resources>

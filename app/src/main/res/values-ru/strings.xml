@@ -269,4 +269,6 @@
     <string name="ring_default">Папка</string>
     <string name="ring_empty">Пока пусто — выберите приложения</string>
     <string name="ring_done">Готово</string>
+    <string name="widget_pin_title">Поставить виджет?</string>
+    <string name="widget_pin_add">Поставить</string>
 </resources>

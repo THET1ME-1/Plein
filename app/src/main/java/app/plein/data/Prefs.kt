@@ -306,6 +306,21 @@ class Prefs(context: Context) {
         sp.edit().putString(KEY_MONO, value.name).apply()
     }
 
+    /**
+     * Папка, открытая последней.
+     *
+     * Нужна закреплению виджета: приложение просит поставить его «на главный
+     * экран», а страниц у лаунчера несколько. Кладём на ту, где человек был.
+     */
+    var lastFolder by mutableStateOf(sp.getString(KEY_LAST_FOLDER, null).orEmpty())
+        private set
+
+    fun updateLastFolder(value: String) {
+        if (value == lastFolder) return
+        lastFolder = value
+        sp.edit().putString(KEY_LAST_FOLDER, value).apply()
+    }
+
     /** dots, bar, numbers или none. */
     var pageIndicator by mutableStateOf(sp.getString(KEY_PAGE_INDICATOR, null) ?: "dots")
         private set
@@ -486,6 +501,7 @@ class Prefs(context: Context) {
         const val KEY_WEATHER_APP = "weather_app"
         const val KEY_LANGUAGE = "language"
         const val KEY_PAGE_INDICATOR = "page_indicator"
+        const val KEY_LAST_FOLDER = "last_folder"
         const val KEY_MONO = "mono_icons"
         const val KEY_WEB = "web_provider"
         const val KEY_NOTE = "note_text"

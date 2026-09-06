@@ -269,4 +269,6 @@
     <string name="ring_default">Pasta</string>
     <string name="ring_empty">Ainda vazia — escolha os apps</string>
     <string name="ring_done">Pronto</string>
+    <string name="widget_pin_title">Adicionar o widget?</string>
+    <string name="widget_pin_add">Adicionar</string>
 </resources>

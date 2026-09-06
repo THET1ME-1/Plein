@@ -255,6 +255,15 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                 widgets.clearPending()
                 val (folderId, widgetId, size) = waiting
                 if (result.resultCode == RESULT_OK) {
+                    // Привязка — это только половина: виджету со своим экраном
+                    // настройки без него нечего показывать, и на странице он
+                    // встаёт пустым. Ставим уже настроенный.
+                    val info = widgets.infoOf(widgetId)
+                    if (info != null && widgets.needsConfigure(info) &&
+                        configureWidget(folderId, widgetId, size.first, size.second)
+                    ) {
+                        return@rememberLauncherForActivityResult
+                    }
                     layoutStore.addWidget(folderId, widgetId, size.first, size.second, prefs.columns)
                     haptics.confirm()
                 } else {
@@ -887,8 +896,17 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                             // система показывает свой запрос.
                             val widgetId = widgets.allocateId()
                             if (widgets.bind(widgetId, provider.info)) {
-                                layoutStore.addWidget(folderId, widgetId, width, height, prefs.columns)
-                                haptics.confirm()
+                                // У виджета может быть свой экран настройки:
+                                // без него он встаёт пустым. Настроенный придёт
+                                // на страницу из onActivityResult.
+                                val configuring = widgets.needsConfigure(provider.info) &&
+                                    configureWidget(folderId, widgetId, width, height)
+                                if (!configuring) {
+                                    layoutStore.addWidget(
+                                        folderId, widgetId, width, height, prefs.columns,
+                                    )
+                                    haptics.confirm()
+                                }
                             } else {
                                 pendingWidget = Triple(folderId, widgetId, width to height)
                                 // Ожидание дублируется на диск: пока открыт
@@ -1119,6 +1137,40 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
      * Без этого разрешённый виджет пропадал молча, а его номер оставался за
      * лаунчером навсегда — так их и копится десяток за пару месяцев.
      */
+    /**
+     * Открыть экран настройки виджета.
+     *
+     * Ожидание пишем на диск той же дорогой, что и привязку: пока открыт чужой
+     * экран, лаунчер в фоне, и его убивают вместе с состоянием композиции.
+     * Возвращает `false`, если экран открыть не удалось — тогда виджет ставят
+     * как есть.
+     */
+    private fun configureWidget(folderId: String, widgetId: Int, width: Int, height: Int): Boolean {
+        widgets.rememberPending(folderId, widgetId, width, height)
+        val started = widgets.startConfigure(this, widgetId, CONFIGURE_REQUEST)
+        if (!started) widgets.clearPending()
+        return started
+    }
+
+    @Deprecated("Экран настройки виджета открывает хост, а он отвечает старым способом")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
+        @Suppress("DEPRECATION")
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != CONFIGURE_REQUEST) return
+
+        val waiting = widgets.pending() ?: return
+        widgets.clearPending()
+        if (resultCode == RESULT_OK) {
+            layoutStore.addWidget(
+                waiting.folderId, waiting.widgetId, waiting.width, waiting.height, prefs.columns,
+            )
+        } else {
+            // Настройку прервали: виджету нечего показывать, а номер за нами
+            // числился бы вечно.
+            widgets.release(waiting.widgetId)
+        }
+    }
+
     private fun settleWidgets() {
         widgets.pending()?.let { waiting ->
             widgets.clearPending()
@@ -1149,5 +1201,10 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
     override fun onDestroy() {
         repository.stop()
         super.onDestroy()
+    }
+
+    private companion object {
+        /** Свой код для чужого экрана настройки виджета. */
+        const val CONFIGURE_REQUEST = 0x504E
     }
 }

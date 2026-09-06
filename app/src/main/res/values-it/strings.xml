@@ -262,4 +262,11 @@
     <string name="auto_folder_empty">ancora nessuna app</string>
     <string name="folder_now">Adesso</string>
     <string name="folder_now_hint">quello che apri a quest’ora</string>
+    <string name="ring_folder">Cartella circolare</string>
+    <string name="ring_apps">App della cartella</string>
+    <string name="ring_rename">Nome della cartella</string>
+    <string name="ring_remove">Togli la cartella</string>
+    <string name="ring_default">Cartella</string>
+    <string name="ring_empty">Ancora vuota: scegli le app</string>
+    <string name="ring_done">Fatto</string>
 </resources>

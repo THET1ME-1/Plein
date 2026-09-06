@@ -262,4 +262,11 @@
     <string name="auto_folder_empty">noch keine Apps</string>
     <string name="folder_now">Jetzt</string>
     <string name="folder_now_hint">was Sie um diese Zeit öffnen</string>
+    <string name="ring_folder">Kreisordner</string>
+    <string name="ring_apps">Apps im Ordner</string>
+    <string name="ring_rename">Ordnername</string>
+    <string name="ring_remove">Ordner entfernen</string>
+    <string name="ring_default">Ordner</string>
+    <string name="ring_empty">Noch leer — App auswählen</string>
+    <string name="ring_done">Fertig</string>
 </resources>

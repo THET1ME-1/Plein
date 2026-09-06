@@ -262,4 +262,11 @@
     <string name="auto_folder_empty">приложений пока нет</string>
     <string name="folder_now">Сейчас</string>
     <string name="folder_now_hint">то, что вы открываете в этот час</string>
+    <string name="ring_folder">Круговая папка</string>
+    <string name="ring_apps">Приложения папки</string>
+    <string name="ring_rename">Имя папки</string>
+    <string name="ring_remove">Убрать папку</string>
+    <string name="ring_default">Папка</string>
+    <string name="ring_empty">Пока пусто — выберите приложения</string>
+    <string name="ring_done">Готово</string>
 </resources>

@@ -41,6 +41,11 @@ sealed interface CellItem {
     data class Widget(val widgetId: Int) : CellItem {
         override val id: String get() = "widget:$widgetId"
     }
+
+    /** Круговая папка: состав лежит в RingFolders, здесь только её номер. */
+    data class Ring(val ringId: String) : CellItem {
+        override val id: String get() = "ring:$ringId"
+    }
 }
 
 data class Placement(val item: CellItem, val cell: Cell)
@@ -156,6 +161,7 @@ object CellLayout {
             when (val item = placement.item) {
                 is CellItem.Tile -> body.put("kind", item.kind)
                 is CellItem.Widget -> body.put("widget", item.widgetId)
+                is CellItem.Ring -> body.put("ring", item.ringId)
                 else -> return@forEach
             }
             array.put(body)
@@ -169,6 +175,7 @@ object CellLayout {
             val item = array.getJSONObject(index)
             val what = when {
                 item.has("widget") -> CellItem.Widget(item.getInt("widget"))
+                item.has("ring") -> CellItem.Ring(item.getString("ring"))
                 item.has("kind") -> CellItem.Tile(item.getString("kind"))
                 else -> return@mapNotNull null
             }

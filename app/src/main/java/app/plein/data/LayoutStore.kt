@@ -30,6 +30,18 @@ class LayoutStore(context: Context) {
         save(folderId, current + Placement(CellItem.Tile(kind), cell))
     }
 
+    /** Круговая папка: всегда 2×2, состав живёт отдельно в RingFolders. */
+    fun addRing(folderId: String, ringId: String, columns: Int) {
+        val current = tiles(folderId)
+        val cell = CellLayout.firstFree(
+            taken = current.map { it.cell },
+            columns = columns,
+            width = 2.coerceAtMost(columns),
+            height = 2,
+        )
+        save(folderId, current + Placement(CellItem.Ring(ringId), cell))
+    }
+
     /** Виджет приложения: размер приходит от самого приложения. */
     fun addWidget(folderId: String, widgetId: Int, width: Int, height: Int, columns: Int) {
         val current = tiles(folderId)

@@ -90,6 +90,7 @@ fun TilePage(
     editing: Boolean,
     tileContent: @Composable (String) -> Unit,
     widgetContent: @Composable (Int) -> Unit,
+    ringContent: @Composable (String) -> Unit = {},
     onClick: (AppEntry) -> Unit,
     onLongClick: (AppEntry) -> Unit,
     onTileMenu: (CellItem) -> Unit,
@@ -296,7 +297,7 @@ fun TilePage(
                     }
                 }
 
-                is CellItem.Tile, is CellItem.Widget -> {
+                is CellItem.Tile, is CellItem.Widget, is CellItem.Ring -> {
                     val active = dragging?.id == item.id
                     val lift by animateFloatAsState(
                         targetValue = if (active) 1.06f else 1f,
@@ -340,6 +341,10 @@ fun TilePage(
                             when (item) {
                                 is CellItem.Tile -> tileContent(item.kind)
                                 is CellItem.Widget -> widgetContent(item.widgetId)
+                                // Круговая папка ловит касания сама: у неё шесть
+                                // целей по кольцу и середина, слоем поверх их
+                                // не разобрать.
+                                is CellItem.Ring -> ringContent(item.ringId)
                                 else -> Unit
                             }
                         }
@@ -354,6 +359,13 @@ fun TilePage(
                         Box(
                             Modifier
                                 .matchParentSize()
+                                // Круговая папка держит свои цели — шесть значков
+                                // и середину. Слой жестов над ней забирал бы
+                                // касание себе (Compose отдаёт событие верхнему
+                                // из соседей), и кольцо перестало бы нажиматься,
+                                // поэтому у папки он уходит вниз: ему остаётся
+                                // пустое поле диска и края клетки.
+                                .zIndex(if (item is CellItem.Ring) -1f else 0f)
                                 // Ключи без editing и без клетки: жест сам
                                 // включает правку, и раньше это меняло ключ —
                                 // pointerInput пересоздавался, а начатое

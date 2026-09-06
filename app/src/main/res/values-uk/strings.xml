@@ -262,4 +262,11 @@
     <string name="auto_folder_empty">застосунків поки немає</string>
     <string name="folder_now">Зараз</string>
     <string name="folder_now_hint">те, що ви відкриваєте о цій порі</string>
+    <string name="ring_folder">Кругова тека</string>
+    <string name="ring_apps">Застосунки теки</string>
+    <string name="ring_rename">Назва теки</string>
+    <string name="ring_remove">Прибрати теку</string>
+    <string name="ring_default">Тека</string>
+    <string name="ring_empty">Поки порожньо — виберіть застосунки</string>
+    <string name="ring_done">Готово</string>
 </resources>

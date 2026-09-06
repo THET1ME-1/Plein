@@ -262,4 +262,11 @@
     <string name="auto_folder_empty">aucune application</string>
     <string name="folder_now">Maintenant</string>
     <string name="folder_now_hint">ce que vous ouvrez à cette heure</string>
+    <string name="ring_folder">Dossier circulaire</string>
+    <string name="ring_apps">Applis du dossier</string>
+    <string name="ring_rename">Nom du dossier</string>
+    <string name="ring_remove">Retirer le dossier</string>
+    <string name="ring_default">Dossier</string>
+    <string name="ring_empty">Encore vide — choisissez des applis</string>
+    <string name="ring_done">Terminé</string>
 </resources>

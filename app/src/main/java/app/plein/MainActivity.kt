@@ -85,6 +85,7 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
     private lateinit var folderStore: FolderStore
     private lateinit var backdropSource: BackdropSource
     private lateinit var layoutStore: app.plein.data.LayoutStore
+    private lateinit var ringFolders: app.plein.data.RingFolders
     private lateinit var widgets: app.plein.data.Widgets
     private lateinit var hiddenApps: app.plein.data.HiddenApps
     private lateinit var backdropLibrary: app.plein.data.BackdropLibrary
@@ -99,6 +100,7 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
         folderStore = FolderStore(this)
         backdropSource = BackdropSource(this)
         layoutStore = app.plein.data.LayoutStore(this)
+        ringFolders = app.plein.data.RingFolders(this)
         widgets = app.plein.data.Widgets(this)
         hiddenApps = app.plein.data.HiddenApps(this)
         backdropLibrary = app.plein.data.BackdropLibrary(this)
@@ -156,6 +158,11 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
             var tileMenu by remember { mutableStateOf<Pair<String, app.plein.data.CellItem>?>(null) }
             var editingNote by remember { mutableStateOf(false) }
             var addingTileTo by remember { mutableStateOf<String?>(null) }
+            // Раскрытая папка и правка её состава: два разных листа, оба
+            // помнят номер папки, а не её саму — состав меняется под ними.
+            var openRing by remember { mutableStateOf<String?>(null) }
+            var editingRingApps by remember { mutableStateOf<String?>(null) }
+            var renamingRing by remember { mutableStateOf<String?>(null) }
             var pickingWidgetFor by remember { mutableStateOf<String?>(null) }
             var pendingWidget by remember { mutableStateOf<Triple<String, Int, Pair<Int, Int>>?>(null) }
             var weatherTemp by remember { mutableStateOf<String?>(null) }
@@ -603,6 +610,25 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                     widgetContent = { widgetId ->
                         app.plein.ui.home.WidgetView(widgets = widgets, widgetId = widgetId)
                     },
+                    ringContent = { ringId ->
+                        val folder = ringFolders.get(ringId)
+                        if (folder != null) {
+                            val byKey = remember(apps) { apps.associateBy { it.key } }
+                            app.plein.ui.home.RingFolderCell(
+                                folder = folder,
+                                apps = byKey,
+                                repository = repository,
+                                iconShape = prefs.iconShape,
+                                iconPack = prefs.iconPack,
+                                monoMode = prefs.monoIcons,
+                                // В правке кольцо касаний не ловит: иначе значок
+                                // съедает удержание, и папку не сдвинуть с места.
+                                interactive = !editing,
+                                onLaunch = { repository.launch(it) },
+                                onOpen = { openRing = ringId },
+                            )
+                        }
+                    },
                     onTileAction = { kind ->
                         // Короткое касание плитки ведёт в её приложение;
                         // заметка правится на месте.
@@ -882,11 +908,21 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                         title = getString(R.string.add_tile),
                         options = app.plein.ui.home.Tiles.all.map { kind ->
                             kind to getString(tileTitle(kind))
-                        } + listOf("widget" to getString(R.string.add_widget)),
+                        } + listOf(
+                            "ring" to getString(R.string.ring_folder),
+                            "widget" to getString(R.string.add_widget),
+                        ),
                         selected = "",
                         onPick = { kind ->
                             if (kind == "widget") {
                                 pickingWidgetFor = folderId
+                            } else if (kind == "ring") {
+                                // Пустая папка бесполезна, поэтому сразу за
+                                // созданием открываем состав.
+                                val ringId = ringFolders.create(getString(R.string.ring_default))
+                                layoutStore.addRing(folderId, ringId, prefs.columns)
+                                haptics.confirm()
+                                editingRingApps = ringId
                             } else {
                                 layoutStore.add(folderId, kind, prefs.columns)
                                 haptics.confirm()
@@ -897,6 +933,34 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                 }
 
                 tileMenu?.let { (folderId, item) ->
+                    val ring = item as? app.plein.data.CellItem.Ring
+                    if (ring != null) {
+                        // У папки размеров нет: 2×2 держит кольцо круглым.
+                        // Вместо них — состав, имя и «убрать».
+                        app.plein.ui.settings.ChoiceSheetPublic(
+                            title = ringFolders.get(ring.ringId)?.title.orEmpty()
+                                .ifBlank { getString(R.string.ring_default) },
+                            options = listOf(
+                                "apps" to getString(R.string.ring_apps),
+                                "rename" to getString(R.string.ring_rename),
+                                "remove" to getString(R.string.ring_remove),
+                            ),
+                            selected = "",
+                            onPick = { choice ->
+                                when (choice) {
+                                    "apps" -> editingRingApps = ring.ringId
+                                    "rename" -> renamingRing = ring.ringId
+                                    "remove" -> {
+                                        layoutStore.remove(folderId, item)
+                                        ringFolders.remove(ring.ringId)
+                                        haptics.confirm()
+                                    }
+                                }
+                            },
+                            onDismiss = { tileMenu = null },
+                        )
+                        return@let
+                    }
                     val kind = (item as? app.plein.data.CellItem.Tile)?.kind.orEmpty()
                     val sizes = if (item is app.plein.data.CellItem.Widget) {
                         // Виджету размеры перебираем руками: приложение назвало
@@ -951,6 +1015,61 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                         onValueChange = { prefs.updateNoteText(it) },
                         onConfirm = { editingNote = false },
                         onDismiss = { editingNote = false },
+                    )
+                }
+
+                openRing?.let { ringId ->
+                    val folder = ringFolders.get(ringId)
+                    val byKey = remember(apps) { apps.associateBy { it.key } }
+                    app.plein.ui.home.RingSheet(
+                        title = folder?.title.orEmpty(),
+                        apps = folder?.appKeys?.mapNotNull { byKey[it] }.orEmpty(),
+                        repository = repository,
+                        columns = prefs.columns,
+                        iconSize = app.plein.ui.home.iconSizeFor(prefs.columns),
+                        iconShape = prefs.iconShape,
+                        iconPack = prefs.iconPack,
+                        monoMode = prefs.monoIcons,
+                        showLabels = prefs.showLabels,
+                        onLaunch = {
+                            repository.launch(it)
+                            openRing = null
+                        },
+                        onLongClick = { menuFor = it },
+                        onDismiss = { openRing = null },
+                    )
+                }
+
+                editingRingApps?.let { ringId ->
+                    app.plein.ui.settings.RingAppsSheet(
+                        title = getString(R.string.ring_apps),
+                        apps = apps,
+                        repository = repository,
+                        iconShape = prefs.iconShape,
+                        iconPack = prefs.iconPack,
+                        selected = ringFolders.get(ringId)?.appKeys.orEmpty(),
+                        onConfirm = { keys ->
+                            ringFolders.setApps(ringId, keys)
+                            haptics.confirm()
+                            editingRingApps = null
+                        },
+                        onDismiss = { editingRingApps = null },
+                    )
+                }
+
+                renamingRing?.let { ringId ->
+                    var name by remember(ringId) {
+                        mutableStateOf(ringFolders.get(ringId)?.title.orEmpty())
+                    }
+                    app.plein.ui.settings.NameSheetPublic(
+                        title = getString(R.string.ring_rename),
+                        value = name,
+                        onValueChange = { name = it },
+                        onConfirm = {
+                            ringFolders.rename(ringId, name)
+                            renamingRing = null
+                        },
+                        onDismiss = { renamingRing = null },
                     )
                 }
 

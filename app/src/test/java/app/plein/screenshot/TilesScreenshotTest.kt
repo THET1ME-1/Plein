@@ -73,7 +73,7 @@ class TilesScreenshotTest : ScreenshotTest() {
                 modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
             ) { placement ->
                 when (val item = placement.item) {
-                    is CellItem.Widget -> TileSurface {}
+                    is CellItem.Widget, is CellItem.Ring -> TileSurface {}
                     is CellItem.App -> FakeIcon(item.key.removePrefix("app").toInt())
                     is CellItem.Tile -> when (item.kind) {
                         Tiles.CLOCK -> ClockTile(time = "20:41", date = "СБ, 8 АВГ")

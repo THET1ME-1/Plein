@@ -60,6 +60,21 @@ import kotlin.math.roundToInt
  * разъезжаются под пальцем, а место будущей плитки подсвечено. Без этого было
  * непонятно, куда она встанет и кого подвинет.
  */
+/**
+ * Куда встанет значок, отпущенный в клетке `target`.
+ *
+ * Клетка занята другим приложением — значок берёт его номер в списке. Клетка
+ * пустая или под плиткой — значок встаёт за всеми, кто в обходе идёт раньше.
+ * Пока считался только первый случай, перенос на свободное место возвращал
+ * `-1`, порядок не менялся, и значок отскакивал назад.
+ */
+internal fun appIndexAt(placements: List<Placement>, target: Cell): Int {
+    val apps = placements.filter { it.item is CellItem.App }
+    val direct = apps.indexOfFirst { it.cell.row == target.row && it.cell.col == target.col }
+    if (direct >= 0) return direct
+    return apps.count { it.cell.row < target.row || (it.cell.row == target.row && it.cell.col < target.col) }
+}
+
 @Composable
 fun TilePage(
     apps: List<AppEntry>,
@@ -154,15 +169,19 @@ fun TilePage(
                             Modifier
                                 .fillMaxSize()
                                 .zIndex(if (active) 3f else 0f)
-                                // Иконка переносится тем же жестом, что и плитка:
-                                // на странице с плитками своя раскладка, и
-                                // прежнее перетаскивание из ленивой сетки сюда
-                                // не доставало — значки стояли намертво.
+                                .testTag(item.id)
+                                // Удержание значка открывает меню — так же, как
+                                // в поиске. Переносится значок только в правке:
+                                // страница с плитками ловит касания сама, и
+                                // раньше долгий тап уходил в перенос, из-за чего
+                                // до меню было не добраться вовсе.
                                 .pointerInput(item.id, columns) {
                                     awaitEachGesture {
                                         val down = awaitFirstDown(requireUnconsumed = false)
                                         val from = cellState.value
+                                        val liveEditing = editingState.value
                                         var held = false
+                                        var menuShown = false
                                         var travelled = Offset.Zero
 
                                         try {
@@ -181,11 +200,16 @@ fun TilePage(
                                                     }
                                                 }
                                             } catch (_: PointerEventTimeoutCancellationException) {
-                                                held = true
-                                                dragging = item
-                                                dragOrigin = from
-                                                dragOffset = Offset.Zero
-                                                previewCell = from
+                                                if (liveEditing) {
+                                                    held = true
+                                                    dragging = item
+                                                    dragOrigin = from
+                                                    dragOffset = Offset.Zero
+                                                    previewCell = from
+                                                } else {
+                                                    menuShown = true
+                                                    onLongClick(entry)
+                                                }
                                                 haptics.longPress()
                                             }
 
@@ -216,17 +240,20 @@ fun TilePage(
                                                 if (target != null) {
                                                     val keys = apps.map { it.key }.toMutableList()
                                                     val fromIndex = keys.indexOf(item.key)
-                                                    val toIndex = placements
-                                                        .filter { it.item is CellItem.App }
-                                                        .indexOfFirst { it.cell.row == target.row && it.cell.col == target.col }
-                                                    if (fromIndex >= 0 && toIndex >= 0 && fromIndex != toIndex) {
-                                                        keys.add(toIndex, keys.removeAt(fromIndex))
-                                                        onReorder(keys)
-                                                        haptics.confirm()
+                                                    val toIndex = appIndexAt(placements, target)
+                                                    if (fromIndex >= 0 && toIndex != fromIndex) {
+                                                        keys.removeAt(fromIndex)
+                                                        keys.add(toIndex.coerceIn(0, keys.size), item.key)
+                                                        if (keys != apps.map { it.key }) {
+                                                            onReorder(keys)
+                                                            haptics.confirm()
+                                                        }
                                                     }
                                                 }
-                                            } else if (travelled.getDistance() <= viewConfiguration.touchSlop) {
-                                                if (editingState.value) onLongClick(entry) else onClick(entry)
+                                            } else if (!menuShown &&
+                                                travelled.getDistance() <= viewConfiguration.touchSlop
+                                            ) {
+                                                if (liveEditing) onLongClick(entry) else onClick(entry)
                                             }
                                         } finally {
                                             if (dragging?.id == item.id) {

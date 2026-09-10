@@ -114,6 +114,9 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
         )
         repository.start()
         settleWidgets()
+        // Прошивка Xiaomi гасит полноэкранные жесты под чужим лаунчером и
+        // сбрасывает флаг при перезагрузке. Возвращаем его на каждом запуске.
+        app.plein.data.NavGestures.apply(this)
 
         setContent {
             val context = LocalContext.current

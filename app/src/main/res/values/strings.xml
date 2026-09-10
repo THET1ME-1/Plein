@@ -271,4 +271,7 @@
     <string name="ring_done">Done</string>
     <string name="widget_pin_title">Add the widget?</string>
     <string name="widget_pin_add">Add</string>
+    <string name="system_gestures">Full-screen gestures</string>
+    <string name="system_gestures_hint">Plein keeps them on after every restart</string>
+    <string name="system_gestures_manual">HyperOS blocks them: open the hidden screen and pick gestures</string>
 </resources>

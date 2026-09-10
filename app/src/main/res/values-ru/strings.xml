@@ -271,4 +271,7 @@
     <string name="ring_done">Готово</string>
     <string name="widget_pin_title">Поставить виджет?</string>
     <string name="widget_pin_add">Поставить</string>
+    <string name="system_gestures">Полноэкранные жесты</string>
+    <string name="system_gestures_hint">Plein возвращает их после каждой перезагрузки</string>
+    <string name="system_gestures_manual">HyperOS их запрещает: откройте скрытый экран и выберите жесты</string>
 </resources>

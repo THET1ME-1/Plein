@@ -50,6 +50,7 @@ import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.SwipeUp
 import androidx.compose.material.icons.rounded.TextFields
 import androidx.compose.material.icons.rounded.Upload
 import androidx.compose.material.icons.rounded.Wallpaper
@@ -789,13 +790,30 @@ fun SettingsScreen(
                         icon = Icons.Rounded.Accessibility,
                         title = stringResource(R.string.gestures_service),
                         subtitle = stringResource(R.string.gestures_service_hint),
-                        place = RowPlace.Last,
+                        place = RowPlace.Middle,
                         onClick = {
                             runCatching {
                                 context.startActivity(app.plein.data.PleinGestures.settingsIntent())
                             }
                         },
                     )
+                    if (app.plein.data.NavGestures.supported(context)) {
+                        val navGranted = app.plein.data.NavGestures.granted(context)
+                        SettingsRow(
+                            icon = Icons.Rounded.SwipeUp,
+                            title = stringResource(R.string.system_gestures),
+                            subtitle = stringResource(
+                                if (navGranted) R.string.system_gestures_hint
+                                else R.string.system_gestures_manual
+                            ),
+                            place = RowPlace.Last,
+                            onClick = {
+                                if (!app.plein.data.NavGestures.apply(context)) {
+                                    app.plein.data.NavGestures.openSystemScreen(context)
+                                }
+                            },
+                        )
+                    }
                 }
             }
 

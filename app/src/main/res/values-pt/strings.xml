@@ -271,4 +271,7 @@
     <string name="ring_done">Pronto</string>
     <string name="widget_pin_title">Adicionar o widget?</string>
     <string name="widget_pin_add">Adicionar</string>
+    <string name="system_gestures">Gestos em tela cheia</string>
+    <string name="system_gestures_hint">O Plein os restaura após cada reinício</string>
+    <string name="system_gestures_manual">O HyperOS os bloqueia: abra a tela oculta e escolha gestos</string>
 </resources>

@@ -271,4 +271,7 @@
     <string name="ring_done">Fertig</string>
     <string name="widget_pin_title">Widget hinzufügen?</string>
     <string name="widget_pin_add">Hinzufügen</string>
+    <string name="system_gestures">Vollbild-Gesten</string>
+    <string name="system_gestures_hint">Plein stellt sie nach jedem Neustart wieder her</string>
+    <string name="system_gestures_manual">HyperOS blockiert sie: versteckten Bildschirm öffnen und Gesten wählen</string>
 </resources>

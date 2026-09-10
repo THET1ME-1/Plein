@@ -271,4 +271,7 @@
     <string name="ring_done">Fatto</string>
     <string name="widget_pin_title">Aggiungere il widget?</string>
     <string name="widget_pin_add">Aggiungi</string>
+    <string name="system_gestures">Gesti a schermo intero</string>
+    <string name="system_gestures_hint">Plein li ripristina dopo ogni riavvio</string>
+    <string name="system_gestures_manual">HyperOS li blocca: apri la schermata nascosta e scegli i gesti</string>
 </resources>

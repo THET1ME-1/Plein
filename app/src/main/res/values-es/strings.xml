@@ -271,4 +271,7 @@
     <string name="ring_done">Listo</string>
     <string name="widget_pin_title">¿Añadir el widget?</string>
     <string name="widget_pin_add">Añadir</string>
+    <string name="system_gestures">Gestos a pantalla completa</string>
+    <string name="system_gestures_hint">Plein los restaura tras cada reinicio</string>
+    <string name="system_gestures_manual">HyperOS los bloquea: abre la pantalla oculta y elige gestos</string>
 </resources>

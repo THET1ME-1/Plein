@@ -271,4 +271,7 @@
     <string name="ring_done">Terminé</string>
     <string name="widget_pin_title">Ajouter le widget ?</string>
     <string name="widget_pin_add">Ajouter</string>
+    <string name="system_gestures">Gestes plein écran</string>
+    <string name="system_gestures_hint">Plein les rétablit après chaque redémarrage</string>
+    <string name="system_gestures_manual">HyperOS les bloque : ouvrez l’écran caché et choisissez les gestes</string>
 </resources>
